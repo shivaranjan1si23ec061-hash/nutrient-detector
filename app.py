@@ -11,7 +11,7 @@ st.set_page_config(page_title="Vitamin Deficiency Detector", layout="wide")
 # ---------------------------------------------------------
 st.sidebar.title("⚙️ Settings")
 analysis_type = st.sidebar.selectbox(
-    "Analysis Type", 
+    "Analysis Type",
     ["Full Vitamin Report", "Single Vitamin Analysis"]
 )
 
@@ -19,63 +19,41 @@ selected_vitamin = None
 if analysis_type == "Single Vitamin Analysis":
     selected_vitamin = st.sidebar.selectbox(
         "Choose Vitamin",
-        ["Vitamin A", "Vitamin B12", "Vitamin C", "Vitamin D", "Iron", "Calcium"]
+        ["Vitamin A", "Vitamin B12", "Vitamin C", "Vitamin D", "Vitamin E", "Iron", "Calcium"]
     )
 
 st.sidebar.write("---")
 st.sidebar.caption("Upload an image to begin the analysis.")
 
 # ---------------------------------------------------------
-# Recommendations Database
+# Recommendations Database (Vitamin E Added)
 # ---------------------------------------------------------
 VITAMIN_RECOMMENDATIONS = {
     "Vitamin A": [
-        "Carrots",
-        "Sweet Potatoes",
-        "Spinach",
-        "Egg Yolks",
-        "Pumpkin",
-        "Vitamin A Capsules"
+        "Carrots", "Sweet Potatoes", "Spinach", "Egg Yolks", "Pumpkin", "Vitamin A Capsules"
     ],
     "Vitamin B12": [
-        "Milk & Dairy",
-        "Chicken",
-        "Fish (Tuna / Salmon)",
-        "Eggs",
-        "B12 Tablets"
+        "Milk & Dairy", "Chicken", "Fish (Tuna / Salmon)", "Eggs", "B12 Tablets"
     ],
     "Vitamin C": [
-        "Oranges",
-        "Lemons",
-        "Strawberries",
-        "Broccoli",
-        "Vitamin C Chewable Tablets"
+        "Oranges", "Lemons", "Strawberries", "Broccoli", "Vitamin C Chewable Tablets"
     ],
     "Vitamin D": [
-        "Sunlight Exposure",
-        "Fortified Milk",
-        "Egg Yolks",
-        "Mushrooms",
-        "Vitamin D3 Supplements"
+        "Sunlight Exposure", "Fortified Milk", "Egg Yolks", "Mushrooms", "Vitamin D3 Supplements"
+    ],
+    "Vitamin E": [
+        "Almonds", "Sunflower Seeds", "Spinach", "Avocado", "Vitamin E Capsules"
     ],
     "Iron": [
-        "Spinach",
-        "Red Meat",
-        "Beetroot",
-        "Dates",
-        "Iron Syrup / Tablets"
+        "Spinach", "Red Meat", "Beetroot", "Dates", "Iron Syrup / Tablets"
     ],
     "Calcium": [
-        "Milk",
-        "Curd",
-        "Paneer",
-        "Almonds",
-        "Calcium + Vitamin D Tablets"
+        "Milk", "Curd", "Paneer", "Almonds", "Calcium + Vitamin D Tablets"
     ]
 }
 
 # ---------------------------------------------------------
-# Dummy predictor (fake model)
+# Dummy predictor (Vitamin E added)
 # ---------------------------------------------------------
 def dummy_predict():
     vitamins = {
@@ -83,6 +61,7 @@ def dummy_predict():
         "Vitamin B12": random.uniform(0.2, 0.95),
         "Vitamin C": random.uniform(0.2, 0.95),
         "Vitamin D": random.uniform(0.2, 0.95),
+        "Vitamin E": random.uniform(0.2, 0.95),   # ADDED
         "Iron": random.uniform(0.2, 0.95),
         "Calcium": random.uniform(0.2, 0.95),
     }
@@ -95,15 +74,15 @@ def dummy_predict():
             status = "⚠️ Borderline"
         else:
             status = "✅ Normal"
+
         result[vit] = {"confidence": round(score, 2), "status": status}
 
     return result
 
 # ---------------------------------------------------------
-# Simple fake heatmap generator (NO OpenCV)
+# Fake heatmap generator
 # ---------------------------------------------------------
 def fake_heatmap(image):
-    """Creates a colorful heatmap-like effect without using OpenCV."""
     img = image.convert("RGB")
     heat = img.filter(ImageFilter.EMBOSS)
     heat = ImageOps.colorize(heat.convert("L"), black="blue", white="red")
@@ -138,17 +117,18 @@ if uploaded_file:
 
     st.subheader("🧪 Vitamin Analysis Report")
 
-    # -------------- SINGLE VITAMIN MODE --------------
+    # ---------------------------------------------------------
+    # SINGLE MODE
+    # ---------------------------------------------------------
     if analysis_type == "Single Vitamin Analysis":
         vit = selected_vitamin
         data = prediction[vit]
 
         st.metric(
-            label=f"{vit} Level ({data['status']})", 
+            label=f"{vit} Level ({data['status']})",
             value=f"{data['confidence']*100:.1f}%"
         )
 
-        # Health status
         if data["status"] == "❌ Deficient":
             st.error(f"⚠️ Low {vit} detected.")
         elif data["status"] == "⚠️ Borderline":
@@ -156,22 +136,20 @@ if uploaded_file:
         else:
             st.success(f"{vit} is normal.")
 
-        # Recommendations Section
-        st.subheader(f"🍎 Foods & Products to Recover from {vit} Deficiency")
-
+        st.subheader(f"🍎 Foods & Products to Recover from {vit}")
         for item in VITAMIN_RECOMMENDATIONS[vit]:
             st.write(f"✔ {item}")
 
-    # -------------- FULL REPORT MODE --------------
+    # ---------------------------------------------------------
+    # FULL REPORT
+    # ---------------------------------------------------------
     else:
-        # Full report display
         for vit, data in prediction.items():
             st.write(f"### 🟦 {vit}")
             st.progress(data["confidence"])
             st.write(f"**Status:** {data['status']}")
             st.write(f"**Confidence:** {data['confidence']*100:.1f}%")
 
-            # Recommendations if not normal
             if data["status"] != "✅ Normal":
                 st.write("#### 🍎 Recommended Recovery Items:")
                 for item in VITAMIN_RECOMMENDATIONS[vit]:
@@ -179,7 +157,4 @@ if uploaded_file:
 
             st.write("---")
 
-    # ---------------------------------------------------------
-    # General Reminder
-    # ---------------------------------------------------------
     st.warning("⚠️ This is an AI estimation. Consult a doctor for medical advice.")
