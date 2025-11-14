@@ -1,169 +1,185 @@
 import streamlit as st
-from PIL import Image
 import numpy as np
+from PIL import Image, ImageOps, ImageFilter
 import time
+import random
 
-# ------------------------------------------------------------
-# BEAUTIFUL DASHBOARD THEME
-# ------------------------------------------------------------
-st.set_page_config(
-    page_title="Vitamin Deficiency Detector",
-    layout="wide",
-    page_icon="🥗",
+st.set_page_config(page_title="Vitamin Deficiency Detector", layout="wide")
+
+# ---------------------------------------------------------
+# Sidebar
+# ---------------------------------------------------------
+st.sidebar.title("⚙️ Settings")
+analysis_type = st.sidebar.selectbox(
+    "Analysis Type", 
+    ["Full Vitamin Report", "Single Vitamin Analysis"]
 )
 
-# Custom CSS for Styling
-st.markdown("""
-<style>
-    .big-title {
-        font-size: 42px;
-        font-weight: 900;
-        text-align: center;
-    }
-    .sub-title {
-        font-size: 22px;
-        text-align: center;
-        margin-top: -10px;
-    }
-    .card {
-        background: #ffffff;
-        padding: 20px;
-        border-radius: 18px;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-    }
-    .result-card {
-        background: #e7f5ff;
-        padding: 20px;
-        border-radius: 18px;
-        border-left: 6px solid #1c7ed6;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# ------------------------------------------------------------
-# TITLE
-# ------------------------------------------------------------
-st.markdown("<div class='big-title'>🥗 Vitamin Deficiency Detector</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-title'>Upload an image and get health insights instantly</div>", unsafe_allow_html=True)
-st.write("")
-
-# ------------------------------------------------------------
-# SIDEBAR
-# ------------------------------------------------------------
-st.sidebar.header("📥 Upload Image")
-uploaded_file = st.sidebar.file_uploader("Choose an image", type=["jpg", "png", "jpeg"])
+selected_vitamin = None
+if analysis_type == "Single Vitamin Analysis":
+    selected_vitamin = st.sidebar.selectbox(
+        "Choose Vitamin",
+        ["Vitamin A", "Vitamin B12", "Vitamin C", "Vitamin D", "Iron", "Calcium"]
+    )
 
 st.sidebar.write("---")
-st.sidebar.header("ℹ About")
-st.sidebar.info(
-    "This tool analyzes face/skin patterns to estimate possible vitamin deficiencies "
-    "and recommends foods/products to recover quickly."
-)
+st.sidebar.caption("Upload an image to begin the analysis.")
 
-# ------------------------------------------------------------
-# Dummy Detection Function
-# ------------------------------------------------------------
-def predict_deficiency(img_array):
-    """
-    Fake ML Model Logic for Demo Purposes.
-    Replace with your real trained model later.
-    """
-    labels = ["Vitamin D", "Vitamin B12", "Iron", "Calcium", "Vitamin C"]
-    probs = np.random.rand(len(labels))
-    probs = probs / probs.sum()
-    deficiency = labels[np.argmax(probs)]
-    return deficiency, probs
-
-
-# ------------------------------------------------------------
-# Foods & Products Recommendations
-# ------------------------------------------------------------
-recommendations = {
-    "Vitamin D": [
-        "🔸 Sunlight (15–20 mins)",
-        "🔸 Salmon, tuna",
-        "🔸 Vitamin D fortified milk",
-        "🔸 Supplement: **D3 1000 IU**",
+# ---------------------------------------------------------
+# Recommendations Database
+# ---------------------------------------------------------
+VITAMIN_RECOMMENDATIONS = {
+    "Vitamin A": [
+        "Carrots",
+        "Sweet Potatoes",
+        "Spinach",
+        "Egg Yolks",
+        "Pumpkin",
+        "Vitamin A Capsules"
     ],
     "Vitamin B12": [
-        "🔸 Eggs, dairy",
-        "🔸 Fortified cereals",
-        "🔸 Lean meat & fish",
-        "🔸 Supplement: **Methylcobalamin**",
-    ],
-    "Iron": [
-        "🔸 Spinach & leafy vegetables",
-        "🔸 Beans & lentils",
-        "🔸 Red meat",
-        "🔸 Supplement: **Iron + Vitamin C**",
-    ],
-    "Calcium": [
-        "🔸 Milk, curd, paneer",
-        "🔸 Almonds, sesame seeds",
-        "🔸 Ragi",
-        "🔸 Supplement: **Calcium + D3**",
+        "Milk & Dairy",
+        "Chicken",
+        "Fish (Tuna / Salmon)",
+        "Eggs",
+        "B12 Tablets"
     ],
     "Vitamin C": [
-        "🔸 Oranges, lemons",
-        "🔸 Tomatoes",
-        "🔸 Strawberries",
-        "🔸 Supplement: **Ascorbic Acid**",
+        "Oranges",
+        "Lemons",
+        "Strawberries",
+        "Broccoli",
+        "Vitamin C Chewable Tablets"
+    ],
+    "Vitamin D": [
+        "Sunlight Exposure",
+        "Fortified Milk",
+        "Egg Yolks",
+        "Mushrooms",
+        "Vitamin D3 Supplements"
+    ],
+    "Iron": [
+        "Spinach",
+        "Red Meat",
+        "Beetroot",
+        "Dates",
+        "Iron Syrup / Tablets"
+    ],
+    "Calcium": [
+        "Milk",
+        "Curd",
+        "Paneer",
+        "Almonds",
+        "Calcium + Vitamin D Tablets"
     ]
 }
 
-# ------------------------------------------------------------
-# MAIN APP WORKFLOW
-# ------------------------------------------------------------
-col1, col2 = st.columns([1, 2])
+# ---------------------------------------------------------
+# Dummy predictor (fake model)
+# ---------------------------------------------------------
+def dummy_predict():
+    vitamins = {
+        "Vitamin A": random.uniform(0.2, 0.95),
+        "Vitamin B12": random.uniform(0.2, 0.95),
+        "Vitamin C": random.uniform(0.2, 0.95),
+        "Vitamin D": random.uniform(0.2, 0.95),
+        "Iron": random.uniform(0.2, 0.95),
+        "Calcium": random.uniform(0.2, 0.95),
+    }
 
-with col1:
-    st.markdown("### 📤 Uploaded Image")
+    result = {}
+    for vit, score in vitamins.items():
+        if score < 0.45:
+            status = "❌ Deficient"
+        elif score < 0.70:
+            status = "⚠️ Borderline"
+        else:
+            status = "✅ Normal"
+        result[vit] = {"confidence": round(score, 2), "status": status}
 
-    if uploaded_file:
+    return result
+
+# ---------------------------------------------------------
+# Simple fake heatmap generator (NO OpenCV)
+# ---------------------------------------------------------
+def fake_heatmap(image):
+    """Creates a colorful heatmap-like effect without using OpenCV."""
+    img = image.convert("RGB")
+    heat = img.filter(ImageFilter.EMBOSS)
+    heat = ImageOps.colorize(heat.convert("L"), black="blue", white="red")
+    return heat
+
+# ---------------------------------------------------------
+# Upload
+# ---------------------------------------------------------
+uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
+
+if uploaded_file:
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("📸 Uploaded Image")
         img = Image.open(uploaded_file)
-        st.image(img, width=350, caption="Uploaded Image")
+        st.image(img)
 
-with col2:
-    st.markdown("### 🩺 Detection Results")
-    if uploaded_file:
+    with col2:
+        st.subheader("🔥 Feature Heatmap")
+        heat_img = fake_heatmap(img)
+        st.image(heat_img)
 
-        # Convert image to array
-        img_array = np.array(img)
+    st.write("---")
 
-        with st.spinner("Analyzing image... Please wait ⏳"):
-            time.sleep(2)
-            deficiency, probs = predict_deficiency(img_array)
+    # ---------------------------------------------------------
+    # Prediction
+    # ---------------------------------------------------------
+    with st.spinner("Analyzing your image..."):
+        time.sleep(2)
+        prediction = dummy_predict()
 
-        # Display Result
-        st.markdown(f"""
-        <div class='result-card'>
-            <h2>🧬 Detected Deficiency: <b>{deficiency}</b></h2>
-        </div>
-        """, unsafe_allow_html=True)
+    st.subheader("🧪 Vitamin Analysis Report")
 
-        # Probabilities Chart
-        st.markdown("#### 📊 Probability Distribution")
-        st.bar_chart({ 
-            "Vitamin": ["Vitamin D", "Vitamin B12", "Iron", "Calcium", "Vitamin C"],
-            "Probability": probs
-        })
+    # -------------- SINGLE VITAMIN MODE --------------
+    if analysis_type == "Single Vitamin Analysis":
+        vit = selected_vitamin
+        data = prediction[vit]
+
+        st.metric(
+            label=f"{vit} Level ({data['status']})", 
+            value=f"{data['confidence']*100:.1f}%"
+        )
+
+        # Health status
+        if data["status"] == "❌ Deficient":
+            st.error(f"⚠️ Low {vit} detected.")
+        elif data["status"] == "⚠️ Borderline":
+            st.warning(f"{vit} level is borderline.")
+        else:
+            st.success(f"{vit} is normal.")
 
         # Recommendations Section
-        st.markdown("### 🥦 Recommended Foods & Recovery Items")
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.subheader(f"🍎 Foods & Products to Recover from {vit} Deficiency")
 
-        for item in recommendations[deficiency]:
-            st.write(item)
+        for item in VITAMIN_RECOMMENDATIONS[vit]:
+            st.write(f"✔ {item}")
 
-        st.markdown("</div>", unsafe_allow_html=True)
-
+    # -------------- FULL REPORT MODE --------------
     else:
-        st.info("⬅ Upload an image from the left sidebar to get results.")
+        # Full report display
+        for vit, data in prediction.items():
+            st.write(f"### 🟦 {vit}")
+            st.progress(data["confidence"])
+            st.write(f"**Status:** {data['status']}")
+            st.write(f"**Confidence:** {data['confidence']*100:.1f}%")
 
+            # Recommendations if not normal
+            if data["status"] != "✅ Normal":
+                st.write("#### 🍎 Recommended Recovery Items:")
+                for item in VITAMIN_RECOMMENDATIONS[vit]:
+                    st.write(f"- {item}")
 
-# ------------------------------------------------------------
-# FOOTER
-# ------------------------------------------------------------
-st.write("---")
-st.markdown("<center>⚕ Made with ❤️ for Health Detection Demo</center>", unsafe_allow_html=True)
+            st.write("---")
+
+    # ---------------------------------------------------------
+    # General Reminder
+    # ---------------------------------------------------------
+    st.warning("⚠️ This is an AI estimation. Consult a doctor for medical advice.")
