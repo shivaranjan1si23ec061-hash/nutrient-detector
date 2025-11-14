@@ -11,7 +11,7 @@ st.set_page_config(page_title="Vitamin Deficiency Detector", layout="wide")
 # ---------------------------------------------------------
 st.sidebar.title("⚙️ Settings")
 analysis_type = st.sidebar.selectbox(
-    "Analysis Type",
+    "Analysis Type", 
     ["Full Vitamin Report", "Single Vitamin Analysis"]
 )
 
@@ -19,61 +19,82 @@ selected_vitamin = None
 if analysis_type == "Single Vitamin Analysis":
     selected_vitamin = st.sidebar.selectbox(
         "Choose Vitamin",
-        ["Vitamin A", "Vitamin B12", "Vitamin C", "Vitamin D", "Vitamin E", "Iron", "Calcium"]
+        ["Vitamin A", "Vitamin B12", "Vitamin C", "Vitamin D", "Iron", "Calcium"]
     )
 
 st.sidebar.write("---")
 st.sidebar.caption("Upload an image to begin the analysis.")
 
 # ---------------------------------------------------------
-# Recommendations Database (UPDATED)
+# Recommendations Database
 # ---------------------------------------------------------
 VITAMIN_RECOMMENDATIONS = {
     "Vitamin A": [
-        "Carrots", "Sweet Potatoes", "Spinach", "Egg Yolks", "Pumpkin", "Vitamin A Capsules"
+        "Carrots",
+        "Sweet Potatoes",
+        "Spinach",
+        "Egg Yolks",
+        "Pumpkin",
+        "Vitamin A Capsules"
     ],
     "Vitamin B12": [
-        "Milk & Dairy", "Chicken", "Fish (Tuna / Salmon)", "Eggs", "B12 Tablets"
+        "Milk & Dairy",
+        "Chicken",
+        "Fish (Tuna / Salmon)",
+        "Eggs",
+        "B12 Tablets"
     ],
     "Vitamin C": [
-        "Oranges", "Lemons", "Strawberries", "Broccoli", "Vitamin C Chewable Tablets"
+        "Oranges",
+        "Lemons",
+        "Strawberries",
+        "Broccoli",
+        "Vitamin C Chewable Tablets"
     ],
     "Vitamin D": [
-        "Sunlight Exposure", "Fortified Milk", "Egg Yolks", "Mushrooms", "Vitamin D3 Supplements"
-    ],
-    "Vitamin E": [
-        "Almonds", "Sunflower Seeds", "Spinach", "Avocado", "Vitamin E Capsules"
+        "Sunlight Exposure",
+        "Fortified Milk",
+        "Egg Yolks",
+        "Mushrooms",
+        "Vitamin D3 Supplements"
     ],
     "Iron": [
-        "Spinach", "Red Meat", "Beetroot", "Dates", "Iron Syrup / Tablets"
+        "Spinach",
+        "Red Meat",
+        "Beetroot",
+        "Dates",
+        "Iron Syrup / Tablets"
     ],
     "Calcium": [
-        "Milk", "Curd", "Paneer", "Almonds", "Calcium + Vitamin D Tablets"
+        "Milk",
+        "Curd",
+        "Paneer",
+        "Almonds",
+        "Calcium + Vitamin D Tablets"
     ]
 }
 
 # ---------------------------------------------------------
-# REAL FIX: Dummy predictor including Vitamin E, Iron, Calcium
+# Dummy predictor (fake model)
 # ---------------------------------------------------------
 def dummy_predict():
     vitamins = {
-        "Vitamin A": random.uniform(0.75, 1.0),
-        "Vitamin B12": random.uniform(0.75, 1.0),
-        "Vitamin C": random.uniform(0.75, 1.0),
-        "Vitamin D": random.uniform(0.75, 1.0),
-        "Vitamin E": random.uniform(0.75, 1.0),  
-        "Iron": random.uniform(0.75, 1.0),
-        "Calcium": random.uniform(0.75, 1.0),
+        "Vitamin A": random.uniform(0.2, 0.95),
+        "Vitamin B12": random.uniform(0.2, 0.95),
+        "Vitamin C": random.uniform(0.2, 0.95),
+        "Vitamin D": random.uniform(0.2, 0.95),
+        "Iron": random.uniform(0.2, 0.95),
+        "Calcium": random.uniform(0.2, 0.95),
     }
 
     result = {}
     for vit, score in vitamins.items():
-        if score >= 0.80:
-            status = "✅ Normal"
-        elif score >= 0.60:
+        if score < 0.45:
+            status = "❌ Deficient"
+        elif score < 0.70:
             status = "⚠️ Borderline"
         else:
-            status = "❌ Deficient"
+            status = "✅ Normal"
         result[vit] = {"confidence": round(score, 2), "status": status}
 
     return result
@@ -82,6 +103,7 @@ def dummy_predict():
 # Simple fake heatmap generator (NO OpenCV)
 # ---------------------------------------------------------
 def fake_heatmap(image):
+    """Creates a colorful heatmap-like effect without using OpenCV."""
     img = image.convert("RGB")
     heat = img.filter(ImageFilter.EMBOSS)
     heat = ImageOps.colorize(heat.convert("L"), black="blue", white="red")
@@ -122,7 +144,7 @@ if uploaded_file:
         data = prediction[vit]
 
         st.metric(
-            label=f"{vit} Level ({data['status']})",
+            label=f"{vit} Level ({data['status']})", 
             value=f"{data['confidence']*100:.1f}%"
         )
 
@@ -157,4 +179,7 @@ if uploaded_file:
 
             st.write("---")
 
+    # ---------------------------------------------------------
+    # General Reminder
+    # ---------------------------------------------------------
     st.warning("⚠️ This is an AI estimation. Consult a doctor for medical advice.")
