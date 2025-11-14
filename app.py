@@ -19,14 +19,14 @@ selected_vitamin = None
 if analysis_type == "Single Vitamin Analysis":
     selected_vitamin = st.sidebar.selectbox(
         "Choose Vitamin",
-        ["Vitamin A", "Vitamin B12", "Vitamin C", "Vitamin D", "Vitamin E", "Vitamin K", "Iron", "Calcium"]
+        ["Vitamin A", "Vitamin B12", "Vitamin C", "Vitamin D", "Vitamin E", "Iron", "Calcium"]
     )
 
 st.sidebar.write("---")
 st.sidebar.caption("Upload an image to begin the analysis.")
 
 # ---------------------------------------------------------
-# Recommendations Database - Vitamin K ADDED
+# Recommendations Database (Vitamin K removed)
 # ---------------------------------------------------------
 VITAMIN_RECOMMENDATIONS = {
     "Vitamin A": ["Carrots", "Sweet Potatoes", "Spinach", "Egg Yolks", "Pumpkin", "Vitamin A Capsules"],
@@ -34,13 +34,12 @@ VITAMIN_RECOMMENDATIONS = {
     "Vitamin C": ["Oranges", "Lemons", "Strawberries", "Broccoli", "Vitamin C Tablets"],
     "Vitamin D": ["Sunlight", "Fortified Milk", "Egg Yolks", "Mushrooms", "Vitamin D3 Supplements"],
     "Vitamin E": ["Almonds", "Sunflower Seeds", "Spinach", "Avocado", "Vitamin E Capsules"],
-    "Vitamin K": ["Kale", "Spinach", "Broccoli", "Green Leafy Vegetables", "Vitamin K Tablets"],  # ADDED
-    "Iron": ["Spinach", "Red Meat", "Beetroot", "Dates", "Iron Syrup / Tablets"],
+    "Iron": ["Spinach", "Red Meat", "Beetroot", "Dates", "Iron Tablets"],
     "Calcium": ["Milk", "Curd", "Paneer", "Almonds", "Calcium + Vitamin D Tablets"]
 }
 
 # ---------------------------------------------------------
-# Predictor including Vitamin K
+# Predictor (Vitamin K removed)
 # ---------------------------------------------------------
 def dummy_predict():
     vitamins = {
@@ -49,7 +48,6 @@ def dummy_predict():
         "Vitamin C": random.uniform(0.75, 1.0),
         "Vitamin D": random.uniform(0.75, 1.0),
         "Vitamin E": random.uniform(0.75, 1.0),
-        "Vitamin K": random.uniform(0.75, 1.0),     # ADDED
         "Iron": random.uniform(0.75, 1.0),
         "Calcium": random.uniform(0.75, 1.0),
     }
@@ -67,7 +65,7 @@ def dummy_predict():
     return result
 
 # ---------------------------------------------------------
-# Fake heatmap
+# Heatmap
 # ---------------------------------------------------------
 def fake_heatmap(image):
     img = image.convert("RGB")
@@ -78,73 +76,4 @@ def fake_heatmap(image):
 # ---------------------------------------------------------
 # Upload
 # ---------------------------------------------------------
-uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
-
-if uploaded_file:
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("📸 Uploaded Image")
-        img = Image.open(uploaded_file)
-        st.image(img)
-
-    with col2:
-        st.subheader("🔥 Feature Heatmap")
-        heat_img = fake_heatmap(img)
-        st.image(heat_img)
-
-    st.write("---")
-
-    # ---------------------------------------------------------
-    # Prediction
-    # ---------------------------------------------------------
-    with st.spinner("Analyzing your image..."):
-        time.sleep(2)
-        prediction = dummy_predict()
-
-    st.subheader("🧪 Vitamin Analysis Report")
-
-    # ---------------------------------------------------------
-    # SINGLE VITAMIN MODE
-    # ---------------------------------------------------------
-    if analysis_type == "Single Vitamin Analysis":
-        vit = selected_vitamin
-        data = prediction[vit]
-
-        st.metric(
-            label=f"{vit} Level ({data['status']})",
-            value=f"{data['confidence']*100:.1f}%"
-        )
-
-        # Health status
-        if data["status"] == "❌ Deficient":
-            st.error(f"⚠️ Low {vit} detected.")
-        elif data["status"] == "⚠️ Borderline":
-            st.warning(f"{vit} level is borderline.")
-        else:
-            st.success(f"{vit} is normal.")
-
-        # Recommendations Section
-        st.subheader(f"🍎 Foods & Products to Recover from {vit} Deficiency")
-        for item in VITAMIN_RECOMMENDATIONS[vit]:
-            st.write(f"✔ {item}")
-
-    # ---------------------------------------------------------
-    # FULL REPORT MODE
-    # ---------------------------------------------------------
-    else:
-        for vit, data in prediction.items():
-            st.write(f"### 🟦 {vit}")
-            st.progress(data["confidence"])
-            st.write(f"**Status:** {data['status']} ({data['confidence']*100:.1f}%)")
-
-            if data["status"] != "✅ Normal":
-                st.write("#### 🍎 Recommended Recovery Items:")
-                for item in VITAMIN_RECOMMENDATIONS[vit]:
-                    st.write(f"- {item}")
-
-            st.write("---")
-
-    st.warning("⚠️ This is an AI estimation. Consult a doctor for medical advice.")
-else:
-    st.info("📤 Please upload an image to start.")
+uploaded_file =_
