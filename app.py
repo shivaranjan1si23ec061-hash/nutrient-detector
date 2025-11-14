@@ -26,10 +26,53 @@ st.sidebar.write("---")
 st.sidebar.caption("Upload an image to begin the analysis.")
 
 # ---------------------------------------------------------
-# Title
+# Recommendations Database
 # ---------------------------------------------------------
-st.title("🧬 AI-Powered Vitamin Deficiency Detector")
-st.write("Upload your face or hand image for AI-based nutritional analysis.")
+VITAMIN_RECOMMENDATIONS = {
+    "Vitamin A": [
+        "Carrots",
+        "Sweet Potatoes",
+        "Spinach",
+        "Egg Yolks",
+        "Pumpkin",
+        "Vitamin A Capsules"
+    ],
+    "Vitamin B12": [
+        "Milk & Dairy",
+        "Chicken",
+        "Fish (Tuna / Salmon)",
+        "Eggs",
+        "B12 Tablets"
+    ],
+    "Vitamin C": [
+        "Oranges",
+        "Lemons",
+        "Strawberries",
+        "Broccoli",
+        "Vitamin C Chewable Tablets"
+    ],
+    "Vitamin D": [
+        "Sunlight Exposure",
+        "Fortified Milk",
+        "Egg Yolks",
+        "Mushrooms",
+        "Vitamin D3 Supplements"
+    ],
+    "Iron": [
+        "Spinach",
+        "Red Meat",
+        "Beetroot",
+        "Dates",
+        "Iron Syrup / Tablets"
+    ],
+    "Calcium": [
+        "Milk",
+        "Curd",
+        "Paneer",
+        "Almonds",
+        "Calcium + Vitamin D Tablets"
+    ]
+}
 
 # ---------------------------------------------------------
 # Dummy predictor (fake model)
@@ -95,40 +138,48 @@ if uploaded_file:
 
     st.subheader("🧪 Vitamin Analysis Report")
 
+    # -------------- SINGLE VITAMIN MODE --------------
     if analysis_type == "Single Vitamin Analysis":
         vit = selected_vitamin
+        data = prediction[vit]
+
         st.metric(
-            label=f"{vit} Level ({prediction[vit]['status']})", 
-            value=f"{prediction[vit]['confidence']*100:.1f}%"
+            label=f"{vit} Level ({data['status']})", 
+            value=f"{data['confidence']*100:.1f}%"
         )
 
-        # Status message
-        if prediction[vit]["status"] == "❌ Deficient":
-            st.error(f"⚠️ Low {vit} detected. Consider dietary improvements.")
-        elif prediction[vit]["status"] == "⚠️ Borderline":
+        # Health status
+        if data["status"] == "❌ Deficient":
+            st.error(f"⚠️ Low {vit} detected.")
+        elif data["status"] == "⚠️ Borderline":
             st.warning(f"{vit} level is borderline.")
         else:
             st.success(f"{vit} is normal.")
 
+        # Recommendations Section
+        st.subheader(f"🍎 Foods & Products to Recover from {vit} Deficiency")
+
+        for item in VITAMIN_RECOMMENDATIONS[vit]:
+            st.write(f"✔ {item}")
+
+    # -------------- FULL REPORT MODE --------------
     else:
-        # Full report
+        # Full report display
         for vit, data in prediction.items():
             st.write(f"### 🟦 {vit}")
             st.progress(data["confidence"])
             st.write(f"**Status:** {data['status']}")
             st.write(f"**Confidence:** {data['confidence']*100:.1f}%")
+
+            # Recommendations if not normal
+            if data["status"] != "✅ Normal":
+                st.write("#### 🍎 Recommended Recovery Items:")
+                for item in VITAMIN_RECOMMENDATIONS[vit]:
+                    st.write(f"- {item}")
+
             st.write("---")
 
     # ---------------------------------------------------------
-    # Recommendations
+    # General Reminder
     # ---------------------------------------------------------
-    st.subheader("🥗 Personalized Health Recommendations")
-
-    for vit, data in prediction.items():
-        if data["status"] == "❌ Deficient":
-            st.error(f"**{vit}: Deficient** → Increase intake immediately.")
-        elif data["status"] == "⚠️ Borderline":
-            st.warning(f"**{vit}: Borderline** → Improve diet.")
-        else:
-            st.success(f"**{vit}: Normal** → Good level maintained.")
-
+    st.warning("⚠️ This is an AI estimation. Consult a doctor for medical advice.")
