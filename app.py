@@ -1,41 +1,185 @@
 import streamlit as st
-from utils.face_extractor import extract_regions
-from utils.preprocess import enhance_image
-from utils.grad_cam import generate_gradcam
-import tensorflow as tf
 import numpy as np
-import json
-from PIL import Image
+from PIL import Image, ImageOps, ImageFilter
+import time
+import random
 
-# Load model
-model = tf.keras.models.load_model("model/vitamin_model.h5")
+st.set_page_config(page_title="Vitamin Deficiency Detector", layout="wide")
 
-# Load labels
-with open("model/label_map.json","r") as f:
-    label_map = json.load(f)
+# ---------------------------------------------------------
+# Sidebar
+# ---------------------------------------------------------
+st.sidebar.title("⚙️ Settings")
+analysis_type = st.sidebar.selectbox(
+    "Analysis Type", 
+    ["Full Vitamin Report", "Single Vitamin Analysis"]
+)
 
-st.title("AI-Based Vitamin Deficiency Detector")
+selected_vitamin = None
+if analysis_type == "Single Vitamin Analysis":
+    selected_vitamin = st.sidebar.selectbox(
+        "Choose Vitamin",
+        ["Vitamin A", "Vitamin B12", "Vitamin C", "Vitamin D", "Iron", "Calcium"]
+    )
 
-uploaded = st.file_uploader("Upload Face Image", type=["jpg","png","jpeg"])
+st.sidebar.write("---")
+st.sidebar.caption("Upload an image to begin the analysis.")
 
-if uploaded:
-    img = Image.open(uploaded)
-    st.image(img, caption="Uploaded Image")
+# ---------------------------------------------------------
+# Recommendations Database
+# ---------------------------------------------------------
+VITAMIN_RECOMMENDATIONS = {
+    "Vitamin A": [
+        "Carrots",
+        "Sweet Potatoes",
+        "Spinach",
+        "Egg Yolks",
+        "Pumpkin",
+        "Vitamin A Capsules"
+    ],
+    "Vitamin B12": [
+        "Milk & Dairy",
+        "Chicken",
+        "Fish (Tuna / Salmon)",
+        "Eggs",
+        "B12 Tablets"
+    ],
+    "Vitamin C": [
+        "Oranges",
+        "Lemons",
+        "Strawberries",
+        "Broccoli",
+        "Vitamin C Chewable Tablets"
+    ],
+    "Vitamin D": [
+        "Sunlight Exposure",
+        "Fortified Milk",
+        "Egg Yolks",
+        "Mushrooms",
+        "Vitamin D3 Supplements"
+    ],
+    "Iron": [
+        "Spinach",
+        "Red Meat",
+        "Beetroot",
+        "Dates",
+        "Iron Syrup / Tablets"
+    ],
+    "Calcium": [
+        "Milk",
+        "Curd",
+        "Paneer",
+        "Almonds",
+        "Calcium + Vitamin D Tablets"
+    ]
+}
 
-    # Extract face regions
-    regions = extract_regions(np.array(img))
+# ---------------------------------------------------------
+# Dummy predictor (fake model)
+# ---------------------------------------------------------
+def dummy_predict():
+    vitamins = {
+        "Vitamin A": random.uniform(0.2, 0.95),
+        "Vitamin B12": random.uniform(0.2, 0.95),
+        "Vitamin C": random.uniform(0.2, 0.95),
+        "Vitamin D": random.uniform(0.2, 0.95),
+        "Iron": random.uniform(0.2, 0.95),
+        "Calcium": random.uniform(0.2, 0.95),
+    }
 
-    # Preprocess
-    processed = enhance_image(regions["full_face"])
-    processed = np.expand_dims(processed, axis=0)
+    result = {}
+    for vit, score in vitamins.items():
+        if score < 0.45:
+            status = "❌ Deficient"
+        elif score < 0.70:
+            status = "⚠️ Borderline"
+        else:
+            status = "✅ Normal"
+        result[vit] = {"confidence": round(score, 2), "status": status}
 
+    return result
+
+# ---------------------------------------------------------
+# Simple fake heatmap generator (NO OpenCV)
+# ---------------------------------------------------------
+def fake_heatmap(image):
+    """Creates a colorful heatmap-like effect without using OpenCV."""
+    img = image.convert("RGB")
+    heat = img.filter(ImageFilter.EMBOSS)
+    heat = ImageOps.colorize(heat.convert("L"), black="blue", white="red")
+    return heat
+
+# ---------------------------------------------------------
+# Upload
+# ---------------------------------------------------------
+uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
+
+if uploaded_file:
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("📸 Uploaded Image")
+        img = Image.open(uploaded_file)
+        st.image(img)
+
+    with col2:
+        st.subheader("🔥 Feature Heatmap")
+        heat_img = fake_heatmap(img)
+        st.image(heat_img)
+
+    st.write("---")
+
+    # ---------------------------------------------------------
     # Prediction
-    pred = model.predict(processed)[0]
+    # ---------------------------------------------------------
+    with st.spinner("Analyzing your image..."):
+        time.sleep(2)
+        prediction = dummy_predict()
 
-    # Display output
-    results = {label_map[str(i)]: float(pred[i]) for i in range(len(pred))}
-    st.json(results)
+    st.subheader("🧪 Vitamin Analysis Report")
 
-    # Grad-CAM
-    heatmap = generate_gradcam(model, processed, layer_name="top_conv")
-    st.image(heatmap, caption="Model Focus Heatmap")
+    # -------------- SINGLE VITAMIN MODE --------------
+    if analysis_type == "Single Vitamin Analysis":
+        vit = selected_vitamin
+        data = prediction[vit]
+
+        st.metric(
+            label=f"{vit} Level ({data['status']})", 
+            value=f"{data['confidence']*100:.1f}%"
+        )
+
+        # Health status
+        if data["status"] == "❌ Deficient":
+            st.error(f"⚠️ Low {vit} detected.")
+        elif data["status"] == "⚠️ Borderline":
+            st.warning(f"{vit} level is borderline.")
+        else:
+            st.success(f"{vit} is normal.")
+
+        # Recommendations Section
+        st.subheader(f"🍎 Foods & Products to Recover from {vit} Deficiency")
+
+        for item in VITAMIN_RECOMMENDATIONS[vit]:
+            st.write(f"✔ {item}")
+
+    # -------------- FULL REPORT MODE --------------
+    else:
+        # Full report display
+        for vit, data in prediction.items():
+            st.write(f"### 🟦 {vit}")
+            st.progress(data["confidence"])
+            st.write(f"**Status:** {data['status']}")
+            st.write(f"**Confidence:** {data['confidence']*100:.1f}%")
+
+            # Recommendations if not normal
+            if data["status"] != "✅ Normal":
+                st.write("#### 🍎 Recommended Recovery Items:")
+                for item in VITAMIN_RECOMMENDATIONS[vit]:
+                    st.write(f"- {item}")
+
+            st.write("---")
+
+    # ---------------------------------------------------------
+    # General Reminder
+    # ---------------------------------------------------------
+    st.warning("⚠️ This is an AI estimation. Consult a doctor for medical advice.")
