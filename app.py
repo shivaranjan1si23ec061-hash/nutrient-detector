@@ -1,7 +1,6 @@
 import streamlit as st
 import numpy as np
-import cv2
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageFilter
 import time
 import random
 
@@ -33,10 +32,9 @@ st.title("🧬 AI-Powered Vitamin Deficiency Detector")
 st.write("Upload your face or hand image for AI-based nutritional analysis.")
 
 # ---------------------------------------------------------
-# Dummy advanced predictor
-# (You can later replace this with a real ML model)
+# Dummy predictor (fake model)
 # ---------------------------------------------------------
-def advanced_dummy_predict(img_array):
+def dummy_predict():
     vitamins = {
         "Vitamin A": random.uniform(0.2, 0.95),
         "Vitamin B12": random.uniform(0.2, 0.95),
@@ -46,7 +44,6 @@ def advanced_dummy_predict(img_array):
         "Calcium": random.uniform(0.2, 0.95),
     }
 
-    # Deficiency based on score
     result = {}
     for vit, score in vitamins.items():
         if score < 0.45:
@@ -55,21 +52,19 @@ def advanced_dummy_predict(img_array):
             status = "⚠️ Borderline"
         else:
             status = "✅ Normal"
-
         result[vit] = {"confidence": round(score, 2), "status": status}
 
     return result
 
 # ---------------------------------------------------------
-# Heatmap generator
+# Simple fake heatmap generator (NO OpenCV)
 # ---------------------------------------------------------
-def generate_heatmap(image):
-    try:
-        img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        heatmap = cv2.applyColorMap(img_gray, cv2.COLORMAP_JET)
-        return heatmap
-    except:
-        return None
+def fake_heatmap(image):
+    """Creates a colorful heatmap-like effect without using OpenCV."""
+    img = image.convert("RGB")
+    heat = img.filter(ImageFilter.EMBOSS)
+    heat = ImageOps.colorize(heat.convert("L"), black="blue", white="red")
+    return heat
 
 # ---------------------------------------------------------
 # Upload
@@ -84,25 +79,19 @@ if uploaded_file:
         img = Image.open(uploaded_file)
         st.image(img)
 
-    # Convert to OpenCV image
-    img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-
-    # Generate heatmap
-    heatmap_img = generate_heatmap(img_cv)
-
-    if heatmap_img is not None:
-        with col2:
-            st.subheader("🔥 Feature Heatmap")
-            st.image(heatmap_img, channels="BGR")
+    with col2:
+        st.subheader("🔥 Feature Heatmap")
+        heat_img = fake_heatmap(img)
+        st.image(heat_img)
 
     st.write("---")
 
     # ---------------------------------------------------------
     # Prediction
     # ---------------------------------------------------------
-    with st.spinner("Analyzing image with AI..."):
+    with st.spinner("Analyzing your image..."):
         time.sleep(2)
-        prediction = advanced_dummy_predict(img_cv)
+        prediction = dummy_predict()
 
     st.subheader("🧪 Vitamin Analysis Report")
 
@@ -113,14 +102,16 @@ if uploaded_file:
             value=f"{prediction[vit]['confidence']*100:.1f}%"
         )
 
+        # Status message
         if prediction[vit]["status"] == "❌ Deficient":
             st.error(f"⚠️ Low {vit} detected. Consider dietary improvements.")
         elif prediction[vit]["status"] == "⚠️ Borderline":
-            st.warning(f"{vit} level is borderline. Monitor closely.")
+            st.warning(f"{vit} level is borderline.")
         else:
-            st.success(f"{vit} is at a healthy level!")
+            st.success(f"{vit} is normal.")
+
     else:
-        # Full vitamin report
+        # Full report
         for vit, data in prediction.items():
             st.write(f"### 🟦 {vit}")
             st.progress(data["confidence"])
@@ -137,9 +128,7 @@ if uploaded_file:
         if data["status"] == "❌ Deficient":
             st.error(f"**{vit}: Deficient** → Increase intake immediately.")
         elif data["status"] == "⚠️ Borderline":
-            st.warning(f"**{vit}: Borderline** → Maintain diet carefully.")
+            st.warning(f"**{vit}: Borderline** → Improve diet.")
         else:
-            st.success(f"**{vit}: Normal** → Keep it up!")
+            st.success(f"**{vit}: Normal** → Good level maintained.")
 
-    st.write("---")
-    st.caption("⚠️ This tool is for educational purposes only. Not medical advice.")
