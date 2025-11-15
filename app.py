@@ -32,7 +32,7 @@ st.sidebar.write("---")
 st.sidebar.caption("Upload an image to begin the analysis.")
 
 # ------------------------------------------
-# RECOMMENDATIONS DATABASE
+# DATABASES
 # ------------------------------------------
 VITAMIN_RECOMMENDATIONS = {
     "Vitamin A": ["Carrots", "Sweet Potatoes", "Spinach", "Egg Yolks", "Pumpkin"],
@@ -61,9 +61,7 @@ SYMPTOMS = {
     "Calcium": "Weak nails, muscle cramps"
 }
 
-# ------------------------------------------
-# RISK CALCULATION
-# ------------------------------------------
+
 def calculate_risk(value):
     if value < 0.45:
         return "High Risk ❗"
@@ -71,8 +69,9 @@ def calculate_risk(value):
         return "Moderate Risk ⚠️"
     return "Low Risk ✅"
 
+
 # ------------------------------------------
-# PREDICTION MODEL
+# MODEL (DUMMY)
 # ------------------------------------------
 def dummy_predict():
     vitamins = {
@@ -111,17 +110,19 @@ def fake_heatmap(image):
     return heat
 
 # ------------------------------------------
-# UPLOAD SECTION
+# FILE UPLOAD
 # ------------------------------------------
 uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
+
+prediction = None
 
 if uploaded_file:
 
     col1, col2 = st.columns(2)
+    img = Image.open(uploaded_file)
 
     with col1:
         st.subheader("📸 Uploaded Image")
-        img = Image.open(uploaded_file)
         st.image(img)
 
     with col2:
@@ -130,40 +131,29 @@ if uploaded_file:
 
     st.write("---")
 
-    # ------------------------------------------
-    # PREDICTION PROCESS
-    # ------------------------------------------
     with st.spinner("Analyzing your image..."):
         time.sleep(2)
         prediction = dummy_predict()
 
     st.subheader("🧪 Vitamin Analysis Report")
 
-    # ------------------------------------------
-    # SINGLE REPORT
-    # ------------------------------------------
+    # ---- SINGLE REPORT ----
     if analysis_type == "Single Vitamin Analysis":
-
         vit = selected_vitamin
         data = prediction[vit]
 
         st.metric(f"{vit} Level ({data['status']})", data["percentage"])
-        st.info(f"📊 Risk Level: **{data['risk']}**")
-
-        st.write("### 🧠 Possible Symptoms")
+        st.info(f"📊 Risk: {data['risk']}")
+        st.write("### Symptoms")
         st.write(f"- {SYMPTOMS[vit]}")
+        st.write("### Foods to Improve")
+        for x in VITAMIN_RECOMMENDATIONS[vit]:
+            st.write("✔ " + x)
+        st.write("### Foods to Avoid")
+        for x in FOODS_TO_AVOID[vit]:
+            st.write("❌ " + x)
 
-        st.write(f"### 🍎 Foods to Improve {vit}")
-        for item in VITAMIN_RECOMMENDATIONS[vit]:
-            st.write("✔ " + item)
-
-        st.write("### 🚫 Foods to Avoid")
-        for item in FOODS_TO_AVOID[vit]:
-            st.write("❌ " + item)
-
-    # ------------------------------------------
-    # FULL REPORT
-    # ------------------------------------------
+    # ---- FULL REPORT ----
     else:
         for vit, data in prediction.items():
             st.write(f"## 🟦 {vit}")
@@ -171,32 +161,27 @@ if uploaded_file:
             st.write(f"**Status:** {data['status']}")
             st.write(f"**Level:** {data['percentage']}")
             st.write(f"**Risk:** {data['risk']}")
-
-            st.write("### 🧠 Symptoms")
+            st.write("### Symptoms")
             st.write(f"- {SYMPTOMS[vit]}")
-
-            st.write("### 🍎 Foods to Improve")
-            for food in VITAMIN_RECOMMENDATIONS[vit]:
-                st.write("- " + food)
-
-            st.write("### 🚫 Foods to Avoid")
-            for avoid in FOODS_TO_AVOID[vit]:
-                st.write("- " + avoid)
-
+            st.write("### Foods to Improve")
+            for x in VITAMIN_RECOMMENDATIONS[vit]:
+                st.write("✔ " + x)
+            st.write("### Foods to Avoid")
+            for x in FOODS_TO_AVOID[vit]:
+                st.write("❌ " + x)
             st.write("---")
 
-    # BUTTON TO OPEN POP-UP
-    st.write("---")
+    # --- POP-UP BUTTON ---
     if st.button("🧬 Open Advanced Dashboard"):
         st.session_state.show_popup = True
         st.experimental_rerun()
 
-    st.warning("⚠️ This is an AI estimation. Consult a doctor for professional advice.")
+    st.warning("⚠️ This is an AI estimation. Consult a doctor for medical advice.")
 
 # ------------------------------------------
-# POP-UP ADVANCED DASHBOARD
+# POP-UP SHOWS SAME DASHBOARD AS FULL REPORT
 # ------------------------------------------
-if st.session_state.show_popup:
+if st.session_state.show_popup and prediction is not None:
 
     st.markdown("""
         <style>
@@ -207,38 +192,50 @@ if st.session_state.show_popup:
                 background: rgba(0,0,0,0.6);
                 z-index: 9999;
             }
-            .popup {
+            .popup-box {
                 position: fixed;
                 top: 50%; left: 50%;
                 transform: translate(-50%, -50%);
                 background: white;
-                width: 70%;
+                width: 75%;
                 padding: 25px;
                 border-radius: 15px;
                 z-index: 10000;
-                box-shadow: 0px 0px 25px rgba(0,0,0,0.4);
+                max-height: 80%;
+                overflow-y: auto;
+                box-shadow: 0 0 25px rgba(0,0,0,0.4);
             }
         </style>
     """, unsafe_allow_html=True)
 
     st.markdown('<div class="overlay"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="popup">', unsafe_allow_html=True)
+    st.markdown('<div class="popup-box">', unsafe_allow_html=True)
 
-    st.markdown("## 🧬 Advanced Analytics Dashboard")
-    st.markdown("### 📊 Your Health Summary")
+    st.markdown("## 🧬 Advanced Vitamin Dashboard (Pop-Up)")
+    st.write("Below is the *same full dashboard*, shown inside the pop-up:")
 
-    colA, colB, colC = st.columns(3)
-    colA.metric("Highest Deficiency", "Vitamin D")
-    colB.metric("Well Balanced", "Vitamin C")
-    colC.metric("Overall Health Score", "78 / 100")
+    st.write("---")
 
-    st.write("### 🌟 Recommendations Summary")
-    st.success("""
-    - Increase sunlight exposure  
-    - Add spinach and beetroot weekly  
-    - Reduce caffeine intake  
-    - Maintain hydration  
-    """)
+    # REUSE SAME FULL REPORT
+    for vit, data in prediction.items():
+        st.write(f"## 🟦 {vit}")
+        st.progress(data["confidence"])
+        st.write(f"**Status:** {data['status']}")
+        st.write(f"**Level:** {data['percentage']}")
+        st.write(f"**Risk:** {data['risk']}")
+
+        st.write("### Symptoms")
+        st.write(f"- {SYMPTOMS[vit]}")
+
+        st.write("### Foods to Improve")
+        for x in VITAMIN_RECOMMENDATIONS[vit]:
+            st.write("✔ " + x)
+
+        st.write("### Foods to Avoid")
+        for x in FOODS_TO_AVOID[vit]:
+            st.write("❌ " + x)
+
+        st.write("---")
 
     if st.button("❌ Close"):
         st.session_state.show_popup = False
