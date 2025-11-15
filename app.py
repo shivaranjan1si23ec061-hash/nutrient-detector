@@ -1,4 +1,4 @@
-    import streamlit as st
+ import streamlit as st
 import numpy as np
 from PIL import Image, ImageOps, ImageFilter
 import time
@@ -55,7 +55,7 @@ FOODS_TO_AVOID = {
     "Vitamin C": ["Junk Food", "Deep-Fried Items"],
     "Vitamin D": ["Too Much Caffeine", "Carbonated Drinks"],
     "Vitamin E": ["High-Sugar Foods"],
-    "Iron": ["Tea Immediately After Meals", "Coffee After Meals"],
+    "Iron": ["Tea After Meals", "Coffee After Meals"],
     "Calcium": ["Soft Drinks", "High Salt Intake"]
 }
 
@@ -110,13 +110,11 @@ def generate_heatmap(image):
 if uploaded_file:
     col1, col2 = st.columns(2)
 
-    # Original Image
     with col1:
         st.subheader("📸 Uploaded Image")
         img = Image.open(uploaded_file)
         st.image(img, use_column_width=True)
 
-    # Heatmap
     with col2:
         st.subheader("🔥 AI Feature Heatmap")
         heat = generate_heatmap(img)
@@ -124,7 +122,6 @@ if uploaded_file:
 
     st.write("---")
 
-    # Generate Predictions
     with st.spinner("🔍 Analyzing Image… Generating Vitamin Report"):
         time.sleep(2)
         report = generate_prediction()
