@@ -61,14 +61,12 @@ SYMPTOMS = {
     "Calcium": "Weak nails, muscle cramps"
 }
 
-
 def calculate_risk(value):
     if value < 0.45:
         return "High Risk ❗"
     elif value < 0.70:
         return "Moderate Risk ⚠️"
     return "Low Risk ✅"
-
 
 # ------------------------------------------
 # MODEL (DUMMY)
@@ -172,14 +170,15 @@ if uploaded_file:
             st.write("---")
 
     # --- POP-UP BUTTON ---
+    st.write("---")
     if st.button("🧬 Open Advanced Dashboard"):
         st.session_state.show_popup = True
-        st.experimental_rerun()
+        st.rerun()
 
     st.warning("⚠️ This is an AI estimation. Consult a doctor for medical advice.")
 
 # ------------------------------------------
-# POP-UP SHOWS SAME DASHBOARD AS FULL REPORT
+# POP-UP DASHBOARD
 # ------------------------------------------
 if st.session_state.show_popup and prediction is not None:
 
@@ -212,33 +211,27 @@ if st.session_state.show_popup and prediction is not None:
     st.markdown('<div class="popup-box">', unsafe_allow_html=True)
 
     st.markdown("## 🧬 Advanced Vitamin Dashboard (Pop-Up)")
-    st.write("Below is the *same full dashboard*, shown inside the pop-up:")
-
     st.write("---")
 
-    # REUSE SAME FULL REPORT
+    # SAME REPORT INSIDE POP-UP
     for vit, data in prediction.items():
         st.write(f"## 🟦 {vit}")
         st.progress(data["confidence"])
         st.write(f"**Status:** {data['status']}")
         st.write(f"**Level:** {data['percentage']}")
         st.write(f"**Risk:** {data['risk']}")
-
         st.write("### Symptoms")
         st.write(f"- {SYMPTOMS[vit]}")
-
         st.write("### Foods to Improve")
         for x in VITAMIN_RECOMMENDATIONS[vit]:
             st.write("✔ " + x)
-
         st.write("### Foods to Avoid")
         for x in FOODS_TO_AVOID[vit]:
             st.write("❌ " + x)
-
         st.write("---")
 
     if st.button("❌ Close"):
         st.session_state.show_popup = False
-        st.experimental_rerun()
+        st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
