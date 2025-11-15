@@ -1,23 +1,14 @@
 import streamlit as st
+import numpy as np
 from PIL import Image, ImageOps, ImageFilter
 import time
 import random
 
 st.set_page_config(page_title="Vitamin Deficiency Detector", layout="wide")
 
-# ------------------------------------------
-# Session State
-# ------------------------------------------
-if "show_dashboard" not in st.session_state:
-    st.session_state.show_dashboard = False
-if "prediction" not in st.session_state:
-    st.session_state.prediction = None
-if "uploaded_img" not in st.session_state:
-    st.session_state.uploaded_img = None
-
-# ------------------------------------------
+# ---------------------------------------------------------
 # Sidebar
-# ------------------------------------------
+# ---------------------------------------------------------
 st.sidebar.title("⚙️ Settings")
 analysis_type = st.sidebar.selectbox(
     "Analysis Type",
@@ -31,161 +22,201 @@ if analysis_type == "Single Vitamin Analysis":
         ["Vitamin A", "Vitamin B12", "Vitamin C", "Vitamin D", "Iron", "Calcium"]
     )
 
-uploaded_file = st.sidebar.file_uploader("Upload Image", type=["jpg","jpeg","png"])
 st.sidebar.write("---")
+st.sidebar.caption("Upload an image to begin the analysis.")
 
-# ------------------------------------------
-# Database
-# ------------------------------------------
-RECOMMEND = {
-    "Vitamin A": ["Carrots","Spinach","Sweet Potatoes","Egg Yolks"],
-    "Vitamin B12": ["Eggs","Milk","Chicken","Fish"],
-    "Vitamin C": ["Oranges","Lemon","Strawberries","Broccoli"],
-    "Vitamin D": ["Sunlight","Fortified Milk","Mushrooms"],
-    "Iron": ["Spinach","Beetroot","Dates","Red Meat"],
-    "Calcium": ["Milk","Curd","Almonds","Paneer"]
+# ---------------------------------------------------------
+# Recommendations Database
+# ---------------------------------------------------------
+VITAMIN_RECOMMENDATIONS = {
+    "Vitamin A": [
+        "Carrots", "Sweet Potatoes", "Spinach",
+        "Egg Yolks", "Pumpkin", "Vitamin A Capsules"
+    ],
+    "Vitamin B12": [
+        "Milk & Dairy", "Chicken", "Fish (Tuna/Salmon)",
+        "Eggs", "B12 Tablets"
+    ],
+    "Vitamin C": [
+        "Oranges", "Lemons", "Strawberries",
+        "Broccoli", "Vitamin C Chewables"
+    ],
+    "Vitamin D": [
+        "Sunlight Exposure", "Fortified Milk",
+        "Egg Yolks", "Mushrooms", "Vitamin D3 Supplements"
+    ],
+    "Iron": [
+        "Spinach", "Red Meat", "Beetroot",
+        "Dates", "Iron Syrup/Tablets"
+    ],
+    "Calcium": [
+        "Milk", "Curd", "Paneer",
+        "Almonds", "Calcium + Vitamin D Tablets"
+    ]
 }
 
-AVOID = {
-    "Vitamin A": ["Alcohol","Processed Foods"],
-    "Vitamin B12": ["Sugary Drinks"],
-    "Vitamin C": ["Junk Food"],
-    "Vitamin D": ["Soft Drinks"],
-    "Iron": ["Tea After Meals"],
-    "Calcium": ["High Salt Foods"]
+# ---------------------------------------------------------
+# Foods to Avoid
+# ---------------------------------------------------------
+FOODS_TO_AVOID = {
+    "Vitamin A": ["Alcohol", "Processed Foods"],
+    "Vitamin B12": ["Sugary Drinks", "Overcooked Food"],
+    "Vitamin C": ["Junk Food", "Deep-Fried Items"],
+    "Vitamin D": ["Too Much Caffeine", "Carbonated Drinks"],
+    "Iron": ["Tea After Meals", "Coffee After Meals"],
+    "Calcium": ["Soft Drinks", "High Salt Intake"]
 }
 
+# ---------------------------------------------------------
+# Symptom Patterns
+# ---------------------------------------------------------
 SYMPTOMS = {
-    "Vitamin A": "Dry skin, night blindness",
-    "Vitamin B12": "Fatigue, pale lips",
-    "Vitamin C": "Weak immunity, dry skin",
-    "Vitamin D": "Bone pain, weakness",
-    "Iron": "Pale skin, dizziness",
-    "Calcium": "Weak nails, cramps"
+    "Vitamin A": "Dry skin, pale eyes, poor night vision",
+    "Vitamin B12": "Fatigue, pale lips, weakness",
+    "Vitamin C": "Low immunity, dry skin, bleeding gums",
+    "Vitamin D": "Bone pain, fatigue, low mood",
+    "Iron": "Pale skin, low energy, weakness",
+    "Calcium": "Weak nails, muscle cramps"
 }
 
-# ------------------------------------------
-# Helpers
-# ------------------------------------------
-def risk(score):
-    if score < 0.45: return "High Risk ❗"
-    if score < 0.70: return "Borderline ⚠️"
-    return "Normal ✅"
+# ---------------------------------------------------------
+# Risk Level Logic
+# ---------------------------------------------------------
+def get_risk(score):
+    if score < 0.45:
+        return "High Risk ❗"
+    elif score < 0.70:
+        return "Moderate Risk ⚠️"
+    return "Low Risk ✅"
 
-def fake_predict():
-    output = {}
-    for v in RECOMMEND:
-        s = random.uniform(0.2, 0.95)
-        output[v] = {
-            "score": round(s,2),
-            "percent": f"{s*100:.1f}%",
-            "status": "❌ Deficient" if s<0.45 else ("⚠️ Borderline" if s<0.70 else "✅ Normal"),
-            "risk": risk(s)
+# ---------------------------------------------------------
+# Dummy predictor (fake model)
+# ---------------------------------------------------------
+def dummy_predict():
+    vitamins = {
+        "Vitamin A": random.uniform(0.2, 0.95),
+        "Vitamin B12": random.uniform(0.2, 0.95),
+        "Vitamin C": random.uniform(0.2, 0.95),
+        "Vitamin D": random.uniform(0.2, 0.95),
+        "Iron": random.uniform(0.2, 0.95),
+        "Calcium": random.uniform(0.2, 0.95),
+    }
+
+    result = {}
+    for vit, score in vitamins.items():
+        if score < 0.45:
+            status = "❌ Deficient"
+        elif score < 0.70:
+            status = "⚠️ Borderline"
+        else:
+            status = "✅ Normal"
+
+        result[vit] = {
+            "confidence": round(score, 2),
+            "percentage": f"{score*100:.1f}%",
+            "status": status,
+            "risk": get_risk(score),
         }
-    return output
+    return result
 
-def fake_heatmap(img):
-    img = img.convert("RGB")
+# ---------------------------------------------------------
+# Simple fake heatmap generator
+# ---------------------------------------------------------
+def fake_heatmap(image):
+    img = image.convert("RGB")
     heat = img.filter(ImageFilter.EMBOSS)
-    return ImageOps.colorize(heat.convert("L"), black="blue", white="red")
+    heat = ImageOps.colorize(heat.convert("L"), black="blue", white="red")
+    return heat
 
-# ------------------------------------------
-# Upload Image
-# ------------------------------------------
+# ---------------------------------------------------------
+# Upload Section
+# ---------------------------------------------------------
+uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
+
 if uploaded_file:
-    st.session_state.uploaded_img = Image.open(uploaded_file)
-    st.session_state.prediction = None  # reset
+    col1, col2 = st.columns(2)
 
-# ------------------------------------------
-# MAIN VIEW
-# ------------------------------------------
-st.title("🧬 Vitamin Deficiency Detector")
-
-if st.session_state.uploaded_img:
-    col1,col2 = st.columns(2)
     with col1:
-        st.subheader("Uploaded Image")
-        st.image(st.session_state.uploaded_img)
+        st.subheader("📸 Uploaded Image")
+        img = Image.open(uploaded_file)
+        st.image(img)
 
     with col2:
-        st.subheader("Feature Heatmap")
-        st.image(fake_heatmap(st.session_state.uploaded_img))
+        st.subheader("🔥 Feature Heatmap")
+        heat_img = fake_heatmap(img)
+        st.image(heat_img)
 
-    if st.button("Analyze Image"):
-        with st.spinner("Analyzing..."):
-            time.sleep(1)
-            st.session_state.prediction = fake_predict()
+    st.write("---")
 
-st.write("---")
+    with st.spinner("Analyzing your image..."):
+        time.sleep(2)
+        prediction = dummy_predict()
 
-# ------------------------------------------
-# Show Report
-# ------------------------------------------
-if st.session_state.prediction:
+    st.subheader("🧪 Vitamin Analysis Report")
 
-    pred = st.session_state.prediction
-
+    # ---------------------------------------------------------
+    # SINGLE REPORT
+    # ---------------------------------------------------------
     if analysis_type == "Single Vitamin Analysis":
         vit = selected_vitamin
-        data = pred[vit]
+        data = prediction[vit]
 
-        st.subheader(f"{vit} Report")
-        st.metric(f"{vit} Level ({data['status']})", data["percent"])
-        st.info(f"Risk: {data['risk']}")
+        st.metric(
+            label=f"{vit} Level ({data['status']})",
+            value=data["percentage"]
+        )
 
-        st.write("### Symptoms")
-        st.write(f"- {SYMPTOMS[vit]}")
+        # Health Status
+        if data["status"] == "❌ Deficient":
+            st.error(f"⚠️ Severe {vit} deficiency detected.")
+        elif data["status"] == "⚠️ Borderline":
+            st.warning(f"⚠️ {vit} level is borderline.")
+        else:
+            st.success(f"✔ {vit} level is normal.")
 
-        st.write("### Foods to Improve")
-        for x in RECOMMEND[vit]: st.write("✔ "+x)
+        # Risk
+        st.info(f"📊 **Risk Level:** {data['risk']}")
 
-        st.write("### Foods to Avoid")
-        for x in AVOID[vit]: st.write("❌ "+x)
+        # Symptoms
+        st.write("### 🧠 Possible Symptoms")
+        st.write(f"• {SYMPTOMS[vit]}")
 
+        # Foods to Eat
+        st.write(f"### 🍎 Foods to Improve {vit}")
+        for item in VITAMIN_RECOMMENDATIONS[vit]:
+            st.write(f"✔ {item}")
+
+        # Foods to Avoid
+        st.write(f"### 🚫 Foods to Avoid")
+        for bad in FOODS_TO_AVOID[vit]:
+            st.write(f"❌ {bad}")
+
+    # ---------------------------------------------------------
+    # FULL REPORT
+    # ---------------------------------------------------------
     else:
-        st.subheader("Full Vitamin Report")
-        for vit,data in pred.items():
-            st.write(f"## {vit}")
-            st.progress(data["score"])
-            st.write(f"**Level:** {data['percent']}")
-            st.write(f"**Status:** {data['status']}")
-            st.write(f"**Risk:** {data['risk']}")
-            st.write("Symptoms: "+SYMPTOMS[vit])
-            st.write("Foods to Improve:")
-            for x in RECOMMEND[vit]: st.write("- "+x)
-            st.write("Foods to Avoid:")
-            for x in AVOID[vit]: st.write("- "+x)
+        for vit, data in prediction.items():
+            st.write(f"## 🟦 {vit}")
+            st.progress(data["confidence"])
+
+            st.write(f"**Status:** {data['status']}")  
+            st.write(f"**Level:** {data['percentage']}")  
+            st.write(f"**Risk Level:** {data['risk']}")
+
+            # Symptoms
+            st.write("### 🧠 Possible Symptoms")
+            st.write(f"- {SYMPTOMS[vit]}")
+
+            # Recommendations
+            st.write("### 🍎 Recommended Foods")
+            for food in VITAMIN_RECOMMENDATIONS[vit]:
+                st.write(f"- {food}")
+
+            # Foods to Avoid
+            st.write("### 🚫 Foods to Avoid")
+            for bad in FOODS_TO_AVOID[vit]:
+                st.write(f"- {bad}")
+
             st.write("---")
 
-    # --------------------------------------
-    # DASHBOARD BUTTON (fully working)
-    # --------------------------------------
-    if st.button("📊 Open Advanced Dashboard"):
-        st.session_state.show_dashboard = True
-
-
-# ------------------------------------------
-# ADVANCED DASHBOARD (WORKING GUARANTEED)
-# ------------------------------------------
-if st.session_state.show_dashboard and st.session_state.prediction:
-
-    with st.expander("📊 ADVANCED DASHBOARD (Click to Collapse)", expanded=True):
-
-        st.write("### 🧬 Cross-Vitamin Comparison Dashboard")
-
-        pred = st.session_state.prediction
-
-        for vit,data in pred.items():
-            st.write(f"## {vit}")
-            st.progress(data["score"])
-            st.write(f"**Level:** {data['percent']}")
-            st.write(f"**Risk:** {data['risk']}")
-            st.write(f"Symptoms: {SYMPTOMS[vit]}")
-            st.write("Foods to Improve:")
-            for x in RECOMMEND[vit]: st.write("✔ "+x)
-            st.write("Foods to Avoid:")
-            for x in AVOID[vit]: st.write("❌ "+x)
-            st.write("---")
-
-        if st.button("Close Dashboard"):
-            st.session_state.show_dashboard = False
+    st.warning("⚠️ This is an AI estimation. Consult a doctor for medical advice.")
