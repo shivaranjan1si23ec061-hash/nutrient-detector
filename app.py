@@ -3,17 +3,31 @@ import numpy as np
 from PIL import Image, ImageOps, ImageFilter
 import time
 import random
+import plotly.express as px
+import plotly.graph_objects as go
 
-st.set_page_config(page_title="Vitamin Deficiency Detector", layout="wide")
+st.set_page_config(page_title="AI Vitamin Deficiency Detector",
+                   layout="wide",
+                   page_icon="🧬")
+
+# ---------------------------------------------------------
+# Header
+# ---------------------------------------------------------
+st.title("🧬 AI-Powered Vitamin Deficiency Detection Dashboard")
+st.caption("Upload an image to generate a complete health report")
+
+st.write("---")
 
 # ---------------------------------------------------------
 # Sidebar
 # ---------------------------------------------------------
-st.sidebar.title("⚙️ Settings")
+st.sidebar.title("⚙️ Controls")
 analysis_type = st.sidebar.selectbox(
     "Analysis Type",
     ["Full Vitamin Report", "Single Vitamin Analysis"]
 )
+
+symptoms_toggle = st.sidebar.checkbox("Enable Symptom-Based Insights", True)
 
 selected_vitamin = None
 if analysis_type == "Single Vitamin Analysis":
@@ -23,138 +37,150 @@ if analysis_type == "Single Vitamin Analysis":
     )
 
 st.sidebar.write("---")
-st.sidebar.caption("Upload an image to begin the analysis.")
+uploaded_file = st.sidebar.file_uploader("Upload Image", type=["jpg", "png", "jpeg"])
 
 # ---------------------------------------------------------
-# Recommendations Database (Vitamin E Added)
+# Vitamin Recommendations
 # ---------------------------------------------------------
 VITAMIN_RECOMMENDATIONS = {
-    "Vitamin A": [
-        "Carrots", "Sweet Potatoes", "Spinach", "Egg Yolks", "Pumpkin", "Vitamin A Capsules"
-    ],
-    "Vitamin B12": [
-        "Milk & Dairy", "Chicken", "Fish (Tuna / Salmon)", "Eggs", "B12 Tablets"
-    ],
-    "Vitamin C": [
-        "Oranges", "Lemons", "Strawberries", "Broccoli", "Vitamin C Chewable Tablets"
-    ],
-    "Vitamin D": [
-        "Sunlight Exposure", "Fortified Milk", "Egg Yolks", "Mushrooms", "Vitamin D3 Supplements"
-    ],
-    "Vitamin E": [
-        "Almonds", "Sunflower Seeds", "Spinach", "Avocado", "Vitamin E Capsules"
-    ],
-    "Iron": [
-        "Spinach", "Red Meat", "Beetroot", "Dates", "Iron Syrup / Tablets"
-    ],
-    "Calcium": [
-        "Milk", "Curd", "Paneer", "Almonds", "Calcium + Vitamin D Tablets"
-    ]
+    "Vitamin A": ["Carrots", "Sweet Potatoes", "Spinach", "Egg Yolks", "Pumpkin"],
+    "Vitamin B12": ["Milk", "Fish", "Eggs", "Chicken", "B12 Tablets"],
+    "Vitamin C": ["Oranges", "Lemons", "Strawberries", "Broccoli"],
+    "Vitamin D": ["Sunlight", "Fortified Milk", "Egg Yolks", "Mushrooms", "D3 Supplements"],
+    "Vitamin E": ["Almonds", "Sunflower Seeds", "Avocado", "Vitamin E Capsules"],
+    "Iron": ["Spinach", "Red Meat", "Beetroot", "Iron Tablets"],
+    "Calcium": ["Milk", "Curd", "Paneer", "Almonds", "Calcium + D Tablets"]
 }
 
 # ---------------------------------------------------------
-# Dummy predictor (Vitamin E added)
+# Symptom Analysis (extra intelligence)
 # ---------------------------------------------------------
-def dummy_predict():
-    vitamins = {
-        "Vitamin A": random.uniform(0.2, 0.95),
-        "Vitamin B12": random.uniform(0.2, 0.95),
-        "Vitamin C": random.uniform(0.2, 0.95),
-        "Vitamin D": random.uniform(0.2, 0.95),
-        "Vitamin E": random.uniform(0.2, 0.95),   # ADDED
-        "Iron": random.uniform(0.2, 0.95),
-        "Calcium": random.uniform(0.2, 0.95),
-    }
+SYMPTOM_PATTERNS = {
+    "Vitamin A": "Dry skin, pale eyes, poor night vision",
+    "Vitamin B12": "Fatigue, pale lips, dizziness",
+    "Vitamin C": "Weak immunity, dry skin, bleeding gums",
+    "Vitamin D": "Fatigue, bone pain, low mood",
+    "Vitamin E": "Muscle weakness, vision problems",
+    "Iron": "Pale skin, weakness, low energy",
+    "Calcium": "Weak nails, muscle cramps"
+}
 
+# ---------------------------------------------------------
+# Dummy Predictor (Advanced logic)
+# ---------------------------------------------------------
+def generate_advanced_prediction():
     result = {}
-    for vit, score in vitamins.items():
+    for vit in VITAMIN_RECOMMENDATIONS.keys():
+        score = random.uniform(0.2, 0.95)
+
         if score < 0.45:
             status = "❌ Deficient"
+            risk = "High Risk"
         elif score < 0.70:
             status = "⚠️ Borderline"
+            risk = "Moderate Risk"
         else:
             status = "✅ Normal"
+            risk = "Low Risk"
 
-        result[vit] = {"confidence": round(score, 2), "status": status}
-
+        result[vit] = {
+            "score": round(score, 2),
+            "status": status,
+            "risk": risk
+        }
     return result
 
 # ---------------------------------------------------------
-# Fake heatmap generator
+# Heatmap
 # ---------------------------------------------------------
-def fake_heatmap(image):
+def generate_heatmap(image):
     img = image.convert("RGB")
-    heat = img.filter(ImageFilter.EMBOSS)
+    heat = img.filter(ImageFilter.FIND_EDGES)
     heat = ImageOps.colorize(heat.convert("L"), black="blue", white="red")
     return heat
 
 # ---------------------------------------------------------
-# Upload
+# Main UI Logic
 # ---------------------------------------------------------
-uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
-
 if uploaded_file:
     col1, col2 = st.columns(2)
 
+    # Original Image
     with col1:
         st.subheader("📸 Uploaded Image")
         img = Image.open(uploaded_file)
-        st.image(img)
+        st.image(img, use_column_width=True)
 
+    # Heatmap
     with col2:
-        st.subheader("🔥 Feature Heatmap")
-        heat_img = fake_heatmap(img)
-        st.image(heat_img)
+        st.subheader("🔥 AI Feature Heatmap")
+        heat = generate_heatmap(img)
+        st.image(heat, use_column_width=True)
 
     st.write("---")
 
-    # ---------------------------------------------------------
-    # Prediction
-    # ---------------------------------------------------------
-    with st.spinner("Analyzing your image..."):
+    # Generating Prediction
+    with st.spinner("🔍 Analyzing Image… AI is generating report"):
         time.sleep(2)
-        prediction = dummy_predict()
-
-    st.subheader("🧪 Vitamin Analysis Report")
+        report = generate_advanced_prediction()
 
     # ---------------------------------------------------------
-    # SINGLE MODE
+    # Single Vitamin Mode
     # ---------------------------------------------------------
     if analysis_type == "Single Vitamin Analysis":
-        vit = selected_vitamin
-        data = prediction[vit]
+        data = report[selected_vitamin]
 
-        st.metric(
-            label=f"{vit} Level ({data['status']})",
-            value=f"{data['confidence']*100:.1f}%"
-        )
+        st.header(f"🧪 {selected_vitamin} Status Report")
+        st.metric(label="Status", value=data["status"])
+        st.metric(label="Confidence Level", value=f"{data['score']*100:.1f}%")
+        st.metric(label="Risk Level", value=data["risk"])
 
-        if data["status"] == "❌ Deficient":
-            st.error(f"⚠️ Low {vit} detected.")
-        elif data["status"] == "⚠️ Borderline":
-            st.warning(f"{vit} level is borderline.")
-        else:
-            st.success(f"{vit} is normal.")
-
-        st.subheader(f"🍎 Foods & Products to Recover from {vit}")
-        for item in VITAMIN_RECOMMENDATIONS[vit]:
+        st.subheader("🍎 Recommended Foods")
+        for item in VITAMIN_RECOMMENDATIONS[selected_vitamin]:
             st.write(f"✔ {item}")
 
+        if symptoms_toggle:
+            st.write("### 🧠 Symptom Insights")
+            st.info(SYMPTOM_PATTERNS[selected_vitamin])
+
     # ---------------------------------------------------------
-    # FULL REPORT
+    # FULL REPORT MODE
     # ---------------------------------------------------------
     else:
-        for vit, data in prediction.items():
-            st.write(f"### 🟦 {vit}")
-            st.progress(data["confidence"])
-            st.write(f"**Status:** {data['status']}")
-            st.write(f"**Confidence:** {data['confidence']*100:.1f}%")
+        st.header("📊 Complete Vitamin Analysis Dashboard")
 
-            if data["status"] != "✅ Normal":
-                st.write("#### 🍎 Recommended Recovery Items:")
+        # Radar Chart
+        st.subheader("📌 Vitamin Levels Overview")
+        radar_fig = go.Figure()
+
+        radar_fig.add_trace(go.Scatterpolar(
+            r=[v["score"] for v in report.values()],
+            theta=list(report.keys()),
+            fill='toself',
+            name='Vitamin Levels'
+        ))
+
+        radar_fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+                                showlegend=False)
+        st.plotly_chart(radar_fig, use_container_width=True)
+
+        st.write("---")
+
+        # Detailed breakdown
+        st.header("📋 Vitamin-by-Vitamin Breakdown")
+        for vit, data in report.items():
+            with st.expander(f"🔵 {vit} – {data['status']}"):
+                st.progress(data["score"])
+                st.write(f"**Confidence:** {data['score']*100:.1f}%")
+                st.write(f"**Risk Level:** {data['risk']}")
+
+                st.write("#### 🍎 Recommended Foods")
                 for item in VITAMIN_RECOMMENDATIONS[vit]:
                     st.write(f"- {item}")
 
-            st.write("---")
+                if symptoms_toggle:
+                    st.write("#### 🧠 Possible Symptoms")
+                    st.warning(SYMPTOM_PATTERNS[vit])
 
-    st.warning("⚠️ This is an AI estimation. Consult a doctor for medical advice.")
+    st.write("---")
+    st.warning("⚠️ This is only an AI estimate. For clinical decisions, consult a medical professional.")
