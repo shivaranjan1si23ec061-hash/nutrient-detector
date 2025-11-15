@@ -3,8 +3,7 @@ import numpy as np
 from PIL import Image, ImageOps, ImageFilter
 import time
 import random
-import plotly.express as px
-import plotly.graph_objects as go
+
 st.set_page_config(page_title="AI Vitamin Deficiency Detector",
                    layout="wide",
                    page_icon="🧬")
@@ -35,7 +34,6 @@ if analysis_type == "Single Vitamin Analysis":
         ["Vitamin A", "Vitamin B12", "Vitamin C", "Vitamin D", "Vitamin E", "Iron", "Calcium"]
     )
 
-st.sidebar.write("---")
 uploaded_file = st.sidebar.file_uploader("Upload Image", type=["jpg", "png", "jpeg"])
 
 # ---------------------------------------------------------
@@ -52,7 +50,7 @@ VITAMIN_RECOMMENDATIONS = {
 }
 
 # ---------------------------------------------------------
-# Symptom Analysis (extra intelligence)
+# Symptom Insights
 # ---------------------------------------------------------
 SYMPTOM_PATTERNS = {
     "Vitamin A": "Dry skin, pale eyes, poor night vision",
@@ -65,7 +63,7 @@ SYMPTOM_PATTERNS = {
 }
 
 # ---------------------------------------------------------
-# Dummy Predictor (Advanced logic)
+# Predictor
 # ---------------------------------------------------------
 def generate_advanced_prediction():
     result = {}
@@ -99,12 +97,12 @@ def generate_heatmap(image):
     return heat
 
 # ---------------------------------------------------------
-# Main UI Logic
+# Main Page
 # ---------------------------------------------------------
 if uploaded_file:
     col1, col2 = st.columns(2)
 
-    # Original Image
+    # Uploaded Image
     with col1:
         st.subheader("📸 Uploaded Image")
         img = Image.open(uploaded_file)
@@ -118,13 +116,13 @@ if uploaded_file:
 
     st.write("---")
 
-    # Generating Prediction
-    with st.spinner("🔍 Analyzing Image… AI is generating report"):
+    # Prediction
+    with st.spinner("🔍 Analyzing Image…"):
         time.sleep(2)
         report = generate_advanced_prediction()
 
     # ---------------------------------------------------------
-    # Single Vitamin Mode
+    # SINGLE VITAMIN REPORT
     # ---------------------------------------------------------
     if analysis_type == "Single Vitamin Analysis":
         data = report[selected_vitamin]
@@ -139,47 +137,28 @@ if uploaded_file:
             st.write(f"✔ {item}")
 
         if symptoms_toggle:
-            st.write("### 🧠 Symptom Insights")
+            st.subheader("🧠 Symptom Insights")
             st.info(SYMPTOM_PATTERNS[selected_vitamin])
 
     # ---------------------------------------------------------
-    # FULL REPORT MODE
+    # FULL REPORT
     # ---------------------------------------------------------
     else:
-        st.header("📊 Complete Vitamin Analysis Dashboard")
+        st.header("📊 Complete Vitamin Analysis")
 
-        # Radar Chart
-        st.subheader("📌 Vitamin Levels Overview")
-        radar_fig = go.Figure()
-
-        radar_fig.add_trace(go.Scatterpolar(
-            r=[v["score"] for v in report.values()],
-            theta=list(report.keys()),
-            fill='toself',
-            name='Vitamin Levels'
-        ))
-
-        radar_fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
-                                showlegend=False)
-        st.plotly_chart(radar_fig, use_container_width=True)
-
-        st.write("---")
-
-        # Detailed breakdown
-        st.header("📋 Vitamin-by-Vitamin Breakdown")
         for vit, data in report.items():
             with st.expander(f"🔵 {vit} – {data['status']}"):
                 st.progress(data["score"])
                 st.write(f"**Confidence:** {data['score']*100:.1f}%")
-                st.write(f"**Risk Level:** {data['risk']}")
+                st.write(f"**Risk:** {data['risk']}")
 
-                st.write("#### 🍎 Recommended Foods")
+                st.subheader("🍎 Recommended Foods")
                 for item in VITAMIN_RECOMMENDATIONS[vit]:
                     st.write(f"- {item}")
 
                 if symptoms_toggle:
-                    st.write("#### 🧠 Possible Symptoms")
+                    st.subheader("🧠 Possible Symptoms")
                     st.warning(SYMPTOM_PATTERNS[vit])
 
     st.write("---")
-    st.warning("⚠️ This is only an AI estimate. For clinical decisions, consult a medical professional.")
+    st.warning("⚠️ This is only an AI estimate. Consult a healthcare expert for confirmation.")
