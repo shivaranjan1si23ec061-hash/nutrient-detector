@@ -1,20 +1,23 @@
 import streamlit as st
-import numpy as np
 from PIL import Image, ImageOps, ImageFilter
 import time
 import random
 
-# ------------------------------------------
-# INITIAL POP-UP STATE
-# ------------------------------------------
-if "show_popup" not in st.session_state:
-    st.session_state.show_popup = False
-
+# --------------------------
+# Page + session init
+# --------------------------
 st.set_page_config(page_title="Vitamin Deficiency Detector", layout="wide")
 
-# ------------------------------------------
-# SIDEBAR
-# ------------------------------------------
+if "show_popup" not in st.session_state:
+    st.session_state.show_popup = False
+if "prediction" not in st.session_state:
+    st.session_state.prediction = None
+if "last_image_uploaded" not in st.session_state:
+    st.session_state.last_image_uploaded = None
+
+# --------------------------
+# Sidebar
+# --------------------------
 st.sidebar.title("⚙️ Settings")
 analysis_type = st.sidebar.selectbox(
     "Analysis Type",
@@ -30,10 +33,11 @@ if analysis_type == "Single Vitamin Analysis":
 
 st.sidebar.write("---")
 st.sidebar.caption("Upload an image to begin the analysis.")
+uploaded_file = st.sidebar.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
 
-# ------------------------------------------
-# DATABASES
-# ------------------------------------------
+# --------------------------
+# Data dictionaries
+# --------------------------
 VITAMIN_RECOMMENDATIONS = {
     "Vitamin A": ["Carrots", "Sweet Potatoes", "Spinach", "Egg Yolks", "Pumpkin"],
     "Vitamin B12": ["Milk", "Chicken", "Fish", "Eggs", "B12 Tablets"],
@@ -61,6 +65,9 @@ SYMPTOMS = {
     "Calcium": "Weak nails, muscle cramps"
 }
 
+# --------------------------
+# Helpers
+# --------------------------
 def calculate_risk(value):
     if value < 0.45:
         return "High Risk ❗"
@@ -68,10 +75,9 @@ def calculate_risk(value):
         return "Moderate Risk ⚠️"
     return "Low Risk ✅"
 
-# ------------------------------------------
-# MODEL (DUMMY)
-# ------------------------------------------
 def dummy_predict():
+    """Generate and return a deterministic-ish set of predictions.
+       Stored in session_state so popup and main page use same values."""
     vitamins = {
         "Vitamin A": random.uniform(0.2, 0.95),
         "Vitamin B12": random.uniform(0.2, 0.95),
@@ -80,7 +86,6 @@ def dummy_predict():
         "Iron": random.uniform(0.2, 0.95),
         "Calcium": random.uniform(0.2, 0.95),
     }
-
     result = {}
     for vit, score in vitamins.items():
         if score < 0.45:
@@ -89,70 +94,81 @@ def dummy_predict():
             status = "⚠️ Borderline"
         else:
             status = "✅ Normal"
-
         result[vit] = {
             "confidence": round(score, 2),
             "percentage": f"{score*100:.1f}%",
             "status": status,
-            "risk": calculate_risk(score),
+            "risk": calculate_risk(score)
         }
     return result
 
-# ------------------------------------------
-# HEATMAP
-# ------------------------------------------
-def fake_heatmap(image):
+def fake_heatmap(image: Image.Image) -> Image.Image:
     img = image.convert("RGB")
     heat = img.filter(ImageFilter.EMBOSS)
     heat = ImageOps.colorize(heat.convert("L"), black="blue", white="red")
     return heat
 
-# ------------------------------------------
-# FILE UPLOAD
-# ------------------------------------------
-uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
+# --------------------------
+# Process upload and prediction (persist to session_state)
+# --------------------------
+if uploaded_file is not None:
+    try:
+        img = Image.open(uploaded_file).convert("RGB")
+        st.session_state.last_image_uploaded = uploaded_file.name
+        # run dummy predict and save
+        with st.spinner("Analyzing image and generating report..."):
+            time.sleep(1.0)
+            st.session_state.prediction = dummy_predict()
+    except Exception as e:
+        st.error(f"Could not read the uploaded image: {e}")
+        st.session_state.prediction = None
 
-prediction = None
+# --------------------------
+# Render main UI
+# --------------------------
+st.title("🧬 Vitamin Deficiency Detector")
 
-if uploaded_file:
+if st.session_state.last_image_uploaded:
+    st.caption(f"Last uploaded file: {st.session_state.last_image_uploaded}")
 
+# Show image + heatmap if available
+if uploaded_file is not None:
     col1, col2 = st.columns(2)
-    img = Image.open(uploaded_file)
-
     with col1:
         st.subheader("📸 Uploaded Image")
-        st.image(img)
-
+        st.image(img, use_column_width=True)
     with col2:
         st.subheader("🔥 Feature Heatmap")
-        st.image(fake_heatmap(img))
+        st.image(fake_heatmap(img), use_column_width=True)
 
-    st.write("---")
+st.write("---")
 
-    with st.spinner("Analyzing your image..."):
-        time.sleep(2)
-        prediction = dummy_predict()
+# If prediction exists, show report; otherwise prompt to upload
+if st.session_state.prediction is None:
+    st.info("Upload an image (left sidebar) to generate the vitamin report.")
+else:
+    prediction = st.session_state.prediction  # alias
 
     st.subheader("🧪 Vitamin Analysis Report")
 
-    # ---- SINGLE REPORT ----
-    if analysis_type == "Single Vitamin Analysis":
+    if analysis_type == "Single Vitamin Analysis" and selected_vitamin is not None:
         vit = selected_vitamin
-        data = prediction[vit]
-
-        st.metric(f"{vit} Level ({data['status']})", data["percentage"])
-        st.info(f"📊 Risk: {data['risk']}")
-        st.write("### Symptoms")
-        st.write(f"- {SYMPTOMS[vit]}")
-        st.write("### Foods to Improve")
-        for x in VITAMIN_RECOMMENDATIONS[vit]:
-            st.write("✔ " + x)
-        st.write("### Foods to Avoid")
-        for x in FOODS_TO_AVOID[vit]:
-            st.write("❌ " + x)
-
-    # ---- FULL REPORT ----
+        data = prediction.get(vit)
+        if data:
+            st.metric(label=f"{vit} Level ({data['status']})", value=data["percentage"])
+            st.info(f"📊 Risk: {data['risk']}")
+            st.write("### Symptoms")
+            st.write(f"- {SYMPTOMS[vit]}")
+            st.write("### Foods to Improve")
+            for x in VITAMIN_RECOMMENDATIONS[vit]:
+                st.write("✔ " + x)
+            st.write("### Foods to Avoid")
+            for x in FOODS_TO_AVOID[vit]:
+                st.write("❌ " + x)
+        else:
+            st.error("Prediction for selected vitamin not found.")
     else:
+        # Full report
         for vit, data in prediction.items():
             st.write(f"## 🟦 {vit}")
             st.progress(data["confidence"])
@@ -169,69 +185,70 @@ if uploaded_file:
                 st.write("❌ " + x)
             st.write("---")
 
-    # --- POP-UP BUTTON ---
-    st.write("---")
+    # Open popup button — sets state (no rerun)
     if st.button("🧬 Open Advanced Dashboard"):
         st.session_state.show_popup = True
-        st.rerun()
 
-    st.warning("⚠️ This is an AI estimation. Consult a doctor for medical advice.")
+    st.warning("⚠️ This is an AI estimation. Consult a doctor for professional advice.")
 
-# ------------------------------------------
-# POP-UP DASHBOARD
-# ------------------------------------------
-if st.session_state.show_popup and prediction is not None:
+# --------------------------
+# Popup modal that re-uses session_state.prediction
+# --------------------------
+if st.session_state.show_popup:
+    # safety: ensure prediction exists
+    if st.session_state.prediction is None:
+        st.error("No report available to show in popup. Upload an image first.")
+        if st.button("Close"):
+            st.session_state.show_popup = False
+    else:
+        st.markdown("""
+            <style>
+                .overlay {
+                    position: fixed;
+                    top: 0; left: 0;
+                    width: 100%; height: 100%;
+                    background: rgba(0,0,0,0.55);
+                    z-index: 9999;
+                }
+                .popup-card {
+                    position: fixed;
+                    top: 50%; left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: white;
+                    padding: 20px;
+                    width: 75%;
+                    height: 75%;
+                    overflow: auto;
+                    border-radius: 12px;
+                    z-index: 10000;
+                    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+                }
+            </style>
+        """, unsafe_allow_html=True)
 
-    st.markdown("""
-        <style>
-            .overlay {
-                position: fixed;
-                top: 0; left: 0;
-                width: 100%; height: 100%;
-                background: rgba(0,0,0,0.6);
-                z-index: 9999;
-            }
-            .popup-box {
-                position: fixed;
-                top: 50%; left: 50%;
-                transform: translate(-50%, -50%);
-                background: white;
-                width: 75%;
-                padding: 25px;
-                border-radius: 15px;
-                z-index: 10000;
-                max-height: 80%;
-                overflow-y: auto;
-                box-shadow: 0 0 25px rgba(0,0,0,0.4);
-            }
-        </style>
-    """, unsafe_allow_html=True)
+        st.markdown('<div class="overlay"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="popup-card">', unsafe_allow_html=True)
 
-    st.markdown('<div class="overlay"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="popup-box">', unsafe_allow_html=True)
+        st.markdown("## 🧬 Advanced Vitamin Dashboard (Pop-Up)")
+        st.write("This is the same detailed report shown in the main page:")
 
-    st.markdown("## 🧬 Advanced Vitamin Dashboard (Pop-Up)")
-    st.write("---")
+        for vit, data in st.session_state.prediction.items():
+            st.write(f"### 🟦 {vit}")
+            st.progress(data["confidence"])
+            st.write(f"**Status:** {data['status']}")
+            st.write(f"**Level:** {data['percentage']}")
+            st.write(f"**Risk:** {data['risk']}")
+            st.write("**Symptoms:**")
+            st.write(f"- {SYMPTOMS[vit]}")
+            st.write("**Foods to Improve:**")
+            for x in VITAMIN_RECOMMENDATIONS[vit]:
+                st.write("✔ " + x)
+            st.write("**Foods to Avoid:**")
+            for x in FOODS_TO_AVOID[vit]:
+                st.write("❌ " + x)
+            st.write("---")
 
-    # SAME REPORT INSIDE POP-UP
-    for vit, data in prediction.items():
-        st.write(f"## 🟦 {vit}")
-        st.progress(data["confidence"])
-        st.write(f"**Status:** {data['status']}")
-        st.write(f"**Level:** {data['percentage']}")
-        st.write(f"**Risk:** {data['risk']}")
-        st.write("### Symptoms")
-        st.write(f"- {SYMPTOMS[vit]}")
-        st.write("### Foods to Improve")
-        for x in VITAMIN_RECOMMENDATIONS[vit]:
-            st.write("✔ " + x)
-        st.write("### Foods to Avoid")
-        for x in FOODS_TO_AVOID[vit]:
-            st.write("❌ " + x)
-        st.write("---")
+        if st.button("❌ Close"):
+            st.session_state.show_popup = False
 
-    if st.button("❌ Close"):
-        st.session_state.show_popup = False
-        st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
