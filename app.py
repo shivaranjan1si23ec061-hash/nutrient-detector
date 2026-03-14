@@ -6,13 +6,13 @@ st.set_page_config(page_title="FamilyPay", layout="wide")
 st.title("💳 FamilyPay")
 st.subheader("Sharma Family Dashboard")
 
-# Wallet Balance
-st.metric("Total Family Balance", "₹45,230")
+# Wallet balance
+st.metric("Total Family Wallet Balance", "₹45,230")
 
 st.divider()
 
-# Family Members
-st.header("Family Members")
+# Family members spending
+st.header("Family Members Spending")
 
 members = {
     "Rajesh (Admin)": 7450,
@@ -22,28 +22,28 @@ members = {
     "Dadaji (Elder)": 650
 }
 
-for m in members:
-    st.write(f"👤 {m} - Spent ₹{members[m]} this month")
+for member, amount in members.items():
+    st.write(f"👤 **{member}** spent ₹{amount} this month")
 
 st.divider()
 
 # Transactions
 st.header("Recent Transactions")
 
-data = {
+transactions = {
     "Member": ["Aryan","Priya","Rajesh","Neha","Dadaji"],
     "Merchant": ["Swiggy","Big Bazaar","KSRTC","Apollo Pharmacy","Medical Store"],
-    "Amount":[250,1240,540,120,300]
+    "Amount (₹)": [250,1240,540,120,300]
 }
 
-df = pd.DataFrame(data)
+df = pd.DataFrame(transactions)
 
 st.table(df)
 
 st.divider()
 
-# Savings Goals
-st.header("Savings Goals")
+# Savings goals
+st.header("Family Savings Goals")
 
 st.write("🎯 Goa Trip")
 st.progress(0.56)
