@@ -1,49 +1,194 @@
-# ---------- ADVANCED DATASET ----------
+import streamlit as st
+import pandas as pd
 
-family_name = "Sharma Family"
+st.set_page_config(page_title="FamilyPay", layout="wide")
 
-wallet_balance = 45230
+# --------------------------
 
-members = [
-{"name":"Rajesh","role":"Admin","limit":10000,"spent":7450,"balance":12000},
-{"name":"Priya","role":"Spouse","limit":8000,"spent":5120,"balance":9000},
-{"name":"Aryan","role":"Teen","limit":3000,"spent":2100,"balance":1800},
-{"name":"Neha","role":"Child","limit":1500,"spent":900,"balance":700},
-{"name":"Dadaji","role":"Elder","limit":4000,"spent":650,"balance":3500}
-]
+# SESSION STATES
 
-transactions = pd.DataFrame({
+# --------------------------
 
-"Member":[
-"Aryan","Aryan","Aryan","Priya","Priya","Priya","Rajesh","Rajesh","Rajesh","Neha",
-"Neha","Neha","Dadaji","Dadaji","Dadaji","Aryan","Priya","Rajesh","Priya","Aryan",
-"Rajesh","Priya","Aryan","Neha","Dadaji","Priya","Aryan","Rajesh","Priya","Aryan",
-"Rajesh","Priya","Aryan","Neha","Dadaji","Aryan","Priya","Rajesh","Neha","Aryan",
-"Rajesh","Priya","Aryan","Priya","Rajesh","Aryan","Neha","Dadaji","Priya","Aryan"
-],
+if "screen" not in st.session_state:
+st.session_state.screen = "splash"
 
-"Merchant":[
-"Swiggy","Dominos","Zomato","Big Bazaar","Amazon","Flipkart","KSRTC","IRCTC","Uber","Apollo Pharmacy",
-"Stationery Shop","Book Store","Medical Store","Apollo Pharmacy","Pharmacy Plus","Metro","Reliance Smart","Petrol Pump","Myntra","Swiggy",
-"IRCTC","Amazon","Zomato","School Canteen","Medical Store","Big Bazaar","Uber","KSRTC","Flipkart","Dominos",
-"Petrol Pump","Reliance Smart","Metro","Stationery Shop","Pharmacy Plus","Swiggy","Amazon","IRCTC","Book Store","Dominos",
-"Uber","Big Bazaar","Zomato","Myntra","Petrol Pump","Swiggy","Stationery Shop","Medical Store","Flipkart","Zomato"
-],
+# --------------------------
 
-"Category":[
-"Food","Food","Food","Shopping","Shopping","Shopping","Transport","Transport","Transport","Medical",
-"Education","Education","Medical","Medical","Medical","Transport","Groceries","Transport","Shopping","Food",
-"Transport","Shopping","Food","Food","Medical","Groceries","Transport","Transport","Shopping","Food",
-"Transport","Groceries","Transport","Education","Medical","Food","Shopping","Transport","Education","Food",
-"Transport","Groceries","Food","Shopping","Transport","Food","Education","Medical","Shopping","Food"
-],
+# STYLES
 
-"Amount":[
-250,420,310,1240,2200,1750,540,900,320,120,
-220,450,500,300,1800,350,650,1500,1200,275,
-700,1800,390,150,340,850,460,600,1350,290,
-1100,730,410,210,1500,260,2000,780,340,310,
-450,920,340,1400,1300,280,190,2000,1200,330
-]
+# --------------------------
 
+st.markdown("""
+
+<style>
+
+.main{
+background-color:#2E5C87;
+color:white;
+}
+
+.wallet{
+font-size:60px;
+text-align:center;
+}
+
+.center{
+text-align:center;
+}
+
+.button{
+padding:12px;
+border-radius:10px;
+background:white;
+color:#2E5C87;
+font-weight:bold;
+}
+
+.card{
+background:white;
+padding:15px;
+border-radius:12px;
+box-shadow:0 2px 10px rgba(0,0,0,0.15);
+color:black;
+}
+
+</style>
+
+""",unsafe_allow_html=True)
+
+# --------------------------
+
+# SPLASH SCREEN
+
+# --------------------------
+
+if st.session_state.screen == "splash":
+
+```
+st.markdown("<h1 class='center'>💳</h1>",unsafe_allow_html=True)
+
+st.markdown("<h1 class='center'>FamilyPay</h1>",unsafe_allow_html=True)
+
+st.markdown("<p class='center'>India's first whole-family financial wallet.<br>Built for everyone.</p>",unsafe_allow_html=True)
+
+if st.button("Get Started"):
+    st.session_state.screen = "login"
+    st.rerun()
+```
+
+# --------------------------
+
+# LOGIN SCREEN
+
+# --------------------------
+
+elif st.session_state.screen == "login":
+
+```
+st.title("Secure Login")
+
+phone = st.text_input("Enter Mobile Number","+91 98765 43210")
+
+if st.button("Login with OTP"):
+    st.session_state.screen = "dashboard"
+    st.rerun()
+```
+
+# --------------------------
+
+# DASHBOARD
+
+# --------------------------
+
+elif st.session_state.screen == "dashboard":
+
+```
+st.title("Family Dashboard")
+
+st.metric("Family Wallet Balance","₹45,230")
+
+st.divider()
+```
+
+# --------------------------
+
+# QUICK ACTIONS
+
+```
+col1,col2,col3,col4 = st.columns(4)
+
+col1.button("➕ Add Money")
+col2.button("📤 Send")
+col3.button("⚙ Limits")
+col4.button("📄 Report")
+
+st.divider()
+```
+
+# --------------------------
+
+# MEMBER CARDS
+
+```
+st.subheader("Family Spending")
+
+col1,col2,col3 = st.columns(3)
+
+col1.markdown("""
+<div class="card">
+<b>Rajesh</b><br>
+₹12,500<br>
+No limit set
+</div>
+""",unsafe_allow_html=True)
+
+col2.markdown("""
+<div class="card">
+<b>Priya</b><br>
+₹8,300<br>
+No limit set
+</div>
+""",unsafe_allow_html=True)
+
+col3.markdown("""
+<div class="card">
+<b>Aryan</b><br>
+₹2,500<br>
+Limit ₹3000
+</div>
+""",unsafe_allow_html=True)
+
+st.divider()
+```
+
+# --------------------------
+
+# GOAL
+
+```
+st.subheader("Shared Goal Focus")
+
+st.write("Goa Trip")
+
+st.progress(0.6)
+
+st.write("₹15,000 of ₹25,000")
+
+st.divider()
+```
+
+# --------------------------
+
+# TRANSACTIONS
+
+```
+st.subheader("Recent Transactions")
+
+data = pd.DataFrame({
+"Merchant":["Swiggy","Big Bazaar","Uber","Apollo Pharmacy"],
+"Member":["Aryan","Priya","Rajesh","Dadaji"],
+"Amount":["₹350","₹1200","₹540","₹220"]
 })
+
+st.table(data)
+```
